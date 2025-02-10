@@ -11,6 +11,8 @@ A Chat interface for android apps to have a chat with AI Models
 - [ ] Improve UI
 - [ ] Add support for openai, deepseek without open router
 - [ ] Go into history of chats
+- [ ] Code cleanup + navigation
+- [ ] Service locator
 
 ### FAQs
 
