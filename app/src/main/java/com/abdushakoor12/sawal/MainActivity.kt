@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -41,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -72,6 +75,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 
     var msg by remember { mutableStateOf("") }
 
+    var availableModels by remember { mutableStateOf(listOf<AIModel>()) }
+
     var loading by remember { mutableStateOf(false) }
 
     var chatEntity by remember { mutableStateOf<ChatEntity?>(null) }
@@ -80,6 +85,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 
     val context = LocalContext.current
 
+    var selectedModel by remember { mutableStateOf(App.of(context).prefManager.selectedModel()) }
+
     val repo = App.of(context).repo
     val database = App.of(context).appDatabase
 
@@ -87,12 +94,74 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 
     val isKeySet by App.of(context).prefManager.isKeySetFlow.collectAsState(initial = false)
 
+    var showModelChooser by remember { mutableStateOf(false) }
+
     LaunchedEffect(chatEntity?.uuid) {
         if (chatEntity != null) {
             database.chatMessageEntityDao().getAllMessagesFlow(chatEntity!!.uuid)
                 .collect {
                     messages = it
                 }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        scope.launch(Dispatchers.IO) {
+            availableModels = withContext(Dispatchers.IO) {
+                repo.getAvailableModels().data
+            }
+        }
+    }
+
+    if (showModelChooser && availableModels.isNotEmpty()) {
+        Dialog(onDismissRequest = { showModelChooser = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Please select a model",
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                ) {
+                    items(availableModels) { model ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedModel = model.id
+                                    App.of(context).prefManager.setSelectedModel(model.id)
+                                    showModelChooser = false
+                                }
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                model.name,
+                                modifier = Modifier
+                                    .padding(2.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.primary,
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(3.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -125,7 +194,10 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         scope.launch {
             try {
                 val result = withContext(Dispatchers.IO) {
-                    repo.sendMessage(message = newMessage)
+                    repo.sendMessage(
+                        model = selectedModel,
+                        message = newMessage,
+                    )
                 }
                 result.choices.firstOrNull()?.message?.let {
                     withContext(Dispatchers.IO) {
@@ -197,6 +269,31 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = selectedModel,
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable {
+                        showModelChooser = true
+                    }
+                    .padding(4.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                    .padding(3.dp),
+                color = MaterialTheme.colorScheme.onPrimary,
+                textAlign = TextAlign.Center
+            )
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
@@ -204,23 +301,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             reverseLayout = true
         ) {
             items(messages) { message ->
-                val isUserMessage = message.role == "user"
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = if (isUserMessage) Arrangement.End else Arrangement.Start
-                ) {
-                    Text(
-                        message.message,
-                        modifier = Modifier
-                            .background(
-                                if (isUserMessage) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                            )
-                            .padding(3.dp),
-                        color = if (isUserMessage) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondary,
-                        textAlign = if (message.role == "user") TextAlign.End else TextAlign.Start
-                    )
-                }
+                ChatMessageView(message)
             }
         }
 
@@ -258,3 +339,52 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     }
 }
 
+@Composable
+fun ChatMessageView(message: ChatMessageEntity) {
+    val isUserMessage = message.role == "user"
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalArrangement = if (isUserMessage) Arrangement.End else Arrangement.Start
+    ) {
+        Text(
+            message.message,
+            modifier = Modifier
+                .padding(2.dp)
+                .background(
+                    if (isUserMessage) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                    shape = RoundedCornerShape(4.dp)
+                )
+                .padding(8.dp),
+            color = if (isUserMessage) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondary,
+            textAlign = if (message.role == "user") TextAlign.End else TextAlign.Start
+        )
+    }
+}
+
+@Preview
+@Composable
+fun ChatMessageViewPreview() {
+    SawalTheme {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            ChatMessageView(
+                ChatMessageEntity(
+                    chatId = "123",
+                    message = "Hello World",
+                    role = "user"
+                )
+            )
+
+            ChatMessageView(
+                ChatMessageEntity(
+                    chatId = "123",
+                    message = "Hi? How are you? How may I help you?",
+                    role = "assistant"
+                )
+            )
+        }
+
+    }
+}

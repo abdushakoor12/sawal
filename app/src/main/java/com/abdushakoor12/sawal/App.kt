@@ -12,6 +12,7 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 
@@ -54,8 +55,11 @@ class AIRepo(
             )
         )
     )
+
+    suspend fun getAvailableModels() = api.getAvailableModels()
 }
 
+@SuppressLint("ApplySharedPref")
 class PrefManager(
     context: Context
 ) {
@@ -82,7 +86,15 @@ class PrefManager(
         return sharedPreferences.getString("openrouter_api_key", null)
     }
 
-    @SuppressLint("ApplySharedPref")
+    fun selectedModel(): String {
+        val defaultModel = "google/gemini-2.0-flash-lite-preview-02-05:free"
+        return sharedPreferences.getString("selected_model", defaultModel) ?: defaultModel
+    }
+
+    fun setSelectedModel(model: String) {
+        sharedPreferences.edit().putString("selected_model", model).commit()
+    }
+
     fun setOpenRouterApiKey(apiKey: String) {
         sharedPreferences.edit().putString("openrouter_api_key", apiKey).commit()
     }
@@ -111,7 +123,37 @@ interface OpenAIApi {
         @Header("Authorization") token: String,
         @Body data: Map<String, Any>
     ): AIResponse
+
+    @GET("models")
+    suspend fun getAvailableModels(): ModelsResponse
 }
+
+data class ModelsResponse(
+    val data: List<AIModel>
+)
+
+data class AIModel(
+    val id: String,
+    val name: String,
+    val created: Long,
+    val description: String,
+    val context_length: Int,
+    val architecture: Architecture,
+    val pricing: Pricing,
+)
+
+data class Architecture(
+    val modality: String,
+    val tokenizer: String,
+    val instruct_type: String?
+)
+
+data class Pricing(
+    val prompt: String,
+    val completion: String,
+    val image: String,
+    val request: String
+)
 
 data class AIResponse(
     val id: String,
