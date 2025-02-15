@@ -5,15 +5,11 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import com.abdushakoor12.sawal.data.network.OpenAIApi
+import com.abdushakoor12.sawal.data.network.RetrofitInstance
+import com.abdushakoor12.sawal.data.responses.ModelsResponse
 import com.abdushakoor12.sawal.data.usecases.GetAvailableORModelsUseCase
 import com.abdushakoor12.sawal.database.AppDatabase
-import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.Header
-import retrofit2.http.POST
 
 class App : Application() {
 
@@ -62,91 +58,6 @@ class AIRepo(
             api.getAvailableModels()
         }
 }
-
-object RetrofitInstance {
-    fun getInstance(): Retrofit {
-        val client = OkHttpClient.Builder()
-//            .addInterceptor { chain ->
-//                val originalRequest = chain.request()
-//                chain.proceed(chain.request())
-//            }
-            .build()
-        return Retrofit.Builder()
-            .baseUrl("https://openrouter.ai/api/v1/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .client(client)
-            .build()
-    }
-}
-
-interface OpenAIApi {
-    @POST("chat/completions")
-    @JvmSuppressWildcards
-    suspend fun getCompletions(
-        @Header("Authorization") token: String,
-        @Body data: Map<String, Any>
-    ): AIResponse
-
-    @GET("models")
-    suspend fun getAvailableModels(): ModelsResponse
-}
-
-data class ModelsResponse(
-    val data: List<AIModel>
-)
-
-data class AIModel(
-    val id: String,
-    val name: String,
-    val created: Long,
-    val description: String,
-    val context_length: Int,
-    val architecture: Architecture,
-    val pricing: Pricing,
-)
-
-data class Architecture(
-    val modality: String,
-    val tokenizer: String,
-    val instruct_type: String?
-)
-
-data class Pricing(
-    val prompt: String,
-    val completion: String,
-    val image: String,
-    val request: String
-)
-
-data class AIResponse(
-    val id: String,
-    val provider: String,
-    val model: String,
-    val `object`: String,
-    val created: Long,
-    val choices: List<Choice>,
-    val usage: Usage
-)
-
-data class Choice(
-    val logprobs: Any?, // Use Any? since it's null in the example
-    val finish_reason: String,
-    val native_finish_reason: String,
-    val index: Int,
-    val message: Message
-)
-
-data class Message(
-    val role: String,
-    val content: String,
-    val refusal: Any? // Use Any? since it's null in the example
-)
-
-data class Usage(
-    val prompt_tokens: Int,
-    val completion_tokens: Int,
-    val total_tokens: Int
-)
 
 @Composable
 inline fun <reified T : Any> rememberLookup(): T {
