@@ -1,5 +1,6 @@
 package com.abdushakoor12.sawal.ui.screens.home
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
@@ -14,13 +15,21 @@ import kotlinx.coroutines.flow.stateIn
 
 class HomeViewModel(
     getAvailableORModelsUseCase: GetAvailableORModelsUseCase,
+    private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+
+
+    val msg = savedStateHandle.getStateFlow("msg", "")
 
     val availableModels = getAvailableORModelsUseCase().stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(),
         emptyList()
     )
+
+    fun updateMsg(newValue: String) {
+        savedStateHandle["msg"] = newValue
+    }
 
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
@@ -29,6 +38,7 @@ class HomeViewModel(
                 val locator = (this[APPLICATION_KEY] as App).serviceLocator
                 HomeViewModel(
                     locator.get(),
+                    savedStateHandle
                 )
             }
         }

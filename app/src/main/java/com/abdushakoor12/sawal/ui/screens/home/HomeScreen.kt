@@ -78,6 +78,7 @@ class HomeScreen : Screen {
         val viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
 
         val availableModels by viewModel.availableModels.collectAsState()
+        val msg by viewModel.msg.collectAsState()
 
         val navigator = LocalNavigator.currentOrThrow
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -153,7 +154,9 @@ class HomeScreen : Screen {
                 HomeScreenContent(
                     modifier = Modifier.padding(innerPadding),
                     chatEntity = chatEntity,
-                    onUpdateChatEntity = { chatEntity = it }
+                    onUpdateChatEntity = { chatEntity = it },
+                    msg = msg,
+                    onChangeMsg = { viewModel.updateMsg(it) }
                 )
             }
         }
@@ -163,10 +166,11 @@ class HomeScreen : Screen {
 @Composable
 fun HomeScreenContent(
     modifier: Modifier = Modifier,
+    msg: String,
+    onChangeMsg: (String) -> Unit,
     chatEntity: ChatEntity? = null,
     onUpdateChatEntity: (ChatEntity) -> Unit,
 ) {
-    var msg by remember { mutableStateOf("") }
 
     var loading by remember { mutableStateOf(false) }
 
@@ -220,7 +224,7 @@ fun HomeScreenContent(
             )
         }
 
-        msg = ""
+        onChangeMsg("")
 
         loading = true
         scope.launch {
@@ -326,7 +330,7 @@ fun HomeScreenContent(
         ) {
             OutlinedTextField(
                 value = msg,
-                onValueChange = { msg = it },
+                onValueChange = { onChangeMsg(it) },
                 label = { Text("Your Message...") },
                 modifier = Modifier.weight(1f),
                 keyboardActions = KeyboardActions(
