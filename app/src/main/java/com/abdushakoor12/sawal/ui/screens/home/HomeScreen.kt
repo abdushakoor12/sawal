@@ -1,7 +1,5 @@
 package com.abdushakoor12.sawal.ui.screens.home
 
-import android.util.Log
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,7 +37,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,7 +45,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -58,18 +54,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import com.abdushakoor12.sawal.core.AIRepo
 import com.abdushakoor12.sawal.core.PrefManager
 import com.abdushakoor12.sawal.core.rememberLookup
-import com.abdushakoor12.sawal.database.AppDatabase
-import com.abdushakoor12.sawal.database.ChatEntity
 import com.abdushakoor12.sawal.database.ChatMessageEntity
 import com.abdushakoor12.sawal.database.OpenRouterModelEntity
 import com.abdushakoor12.sawal.ui.screens.settings.SettingsScreen
 import com.abdushakoor12.sawal.ui.theme.SawalTheme
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 class HomeScreen : Screen {
@@ -79,14 +70,14 @@ class HomeScreen : Screen {
 
         val availableModels by viewModel.availableModels.collectAsState()
         val msg by viewModel.msg.collectAsState()
+        val loading by viewModel.loading.collectAsState()
+        val messages by viewModel.messages.collectAsState()
 
         val navigator = LocalNavigator.currentOrThrow
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
 
         var showModelChooser by remember { mutableStateOf(false) }
-
-        var chatEntity by remember { mutableStateOf<ChatEntity?>(null) }
 
         val prefManager = rememberLookup<PrefManager>()
         val selectedModel by prefManager.selectedModelFlow.collectAsState(initial = "google/gemini-2.0-flash-lite-preview-02-05:free")
@@ -105,7 +96,7 @@ class HomeScreen : Screen {
                 ModalDrawerSheet {
                     HomeDrawerSheet(
                         onChatSelected = {
-                            chatEntity = it
+                            viewModel.changeChatId(it.uuid)
                             scope.launch { drawerState.close() }
                         }
                     )
@@ -153,10 +144,11 @@ class HomeScreen : Screen {
             ) { innerPadding ->
                 HomeScreenContent(
                     modifier = Modifier.padding(innerPadding),
-                    chatEntity = chatEntity,
-                    onUpdateChatEntity = { chatEntity = it },
+                    messages = messages,
+                    loading = loading,
                     msg = msg,
-                    onChangeMsg = { viewModel.updateMsg(it) }
+                    onChangeMsg = { viewModel.updateMsg(it) },
+                    onSendMessage = { viewModel.onSendMessage(selectedModel) },
                 )
             }
         }
@@ -167,98 +159,14 @@ class HomeScreen : Screen {
 fun HomeScreenContent(
     modifier: Modifier = Modifier,
     msg: String,
+    loading: Boolean,
     onChangeMsg: (String) -> Unit,
-    chatEntity: ChatEntity? = null,
-    onUpdateChatEntity: (ChatEntity) -> Unit,
+    messages: List<ChatMessageEntity>,
+    onSendMessage: () -> Unit,
 ) {
-
-    var loading by remember { mutableStateOf(false) }
-
-
-    var messages by remember { mutableStateOf(listOf<ChatMessageEntity>()) }
-
     val prefManager = rememberLookup<PrefManager>()
 
-    val selectedModel by prefManager.selectedModelFlow.collectAsState(initial = "google/gemini-2.0-flash-lite-preview-02-05:free")
-
-    val repo = rememberLookup<AIRepo>()
-    val database = rememberLookup<AppDatabase>()
-
-    val scope = rememberCoroutineScope()
-
-    val context = LocalContext.current
-
     val isKeySet by prefManager.isKeySetFlow.collectAsState(initial = false)
-
-
-    LaunchedEffect(chatEntity?.uuid) {
-        if (chatEntity != null) {
-            database.chatMessageEntityDao().getAllMessagesFlow(chatEntity.uuid)
-                .collect {
-                    messages = it
-                }
-        }
-    }
-
-
-    fun onSendMessage() {
-        val newMessage = msg.trim()
-        if (newMessage.isBlank()) return
-
-        val chat = chatEntity ?: ChatEntity(
-            title = newMessage,
-        ).also { chat ->
-            onUpdateChatEntity(chat)
-            scope.launch(Dispatchers.IO) {
-                database.chatEntityDao().insert(chat)
-            }
-        }
-
-        scope.launch(Dispatchers.IO) {
-            database.chatMessageEntityDao().insert(
-                ChatMessageEntity(
-                    chatId = chat.uuid,
-                    message = newMessage,
-                    role = "user"
-                )
-            )
-        }
-
-        onChangeMsg("")
-
-        loading = true
-        scope.launch {
-            try {
-                val result = withContext(Dispatchers.IO) {
-                    repo.sendMessage(
-                        model = selectedModel,
-                        message = newMessage,
-                    )
-                }
-                result.choices.firstOrNull()?.message?.let {
-                    withContext(Dispatchers.IO) {
-                        if (chatEntity == null) {
-                            return@withContext
-                        }
-
-                        database.chatMessageEntityDao()
-                            .insert(
-                                ChatMessageEntity(
-                                    role = it.role, message = it.content,
-                                    chatId = chatEntity.uuid,
-                                )
-                            )
-
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("HomeScreen", "onSendMessage: ${e.message}", e)
-                Toast.makeText(context, "Failed to send message", Toast.LENGTH_SHORT).show()
-            } finally {
-                loading = false
-            }
-        }
-    }
 
     if (!isKeySet) {
         Dialog(onDismissRequest = { }) {
