@@ -53,7 +53,8 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-
+    implementation(libs.voyager.navigator)
+    implementation(libs.voyager.transitions)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

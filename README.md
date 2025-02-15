@@ -5,12 +5,9 @@ A Chat interface for android apps to have a chat with AI Models
 ### Supported APIs
 - [OpenRouter](https://openrouter.ai/). Just get an API Key and get started.
 
-
 ### TODOs
-- [ ] Improve UI
 - [ ] Add support for openai, deepseek without open router
 - [ ] Go into history of chats
-- [ ] Code cleanup + navigation
 - [ ] Service locator
 
 ### FAQs
