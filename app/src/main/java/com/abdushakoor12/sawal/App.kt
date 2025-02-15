@@ -4,6 +4,10 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import com.abdushakoor12.sawal.core.ServiceLocator
 import com.abdushakoor12.sawal.database.AppDatabase
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -18,11 +22,7 @@ import retrofit2.http.POST
 
 class App : Application() {
 
-    val prefManager by lazy { PrefManager(applicationContext) }
-
-    val appDatabase by lazy { AppDatabase.getInstance(applicationContext) }
-
-    lateinit var repo: AIRepo
+    lateinit var serviceLocator: ServiceLocator
         private set
 
     override fun onCreate() {
@@ -30,13 +30,18 @@ class App : Application() {
 
         val api = RetrofitInstance.getInstance().create(OpenAIApi::class.java)
 
-        repo = AIRepo(api, prefManager)
-    }
+        val prefManager = PrefManager(applicationContext)
+        val repo = AIRepo(api, prefManager)
 
-    companion object {
-        fun of(context: Context): App {
-            return context.applicationContext as App
-        }
+        val appDatabase = AppDatabase.getInstance(applicationContext)
+        serviceLocator = ServiceLocator.builder()
+            .addSingleton(prefManager)
+            .addSingleton(api)
+            .addSingleton(repo)
+            .addSingleton(appDatabase)
+            .addSingleton(appDatabase.chatEntityDao())
+            .addSingleton(appDatabase.chatMessageEntityDao())
+            .build()
     }
 }
 
@@ -184,3 +189,13 @@ data class Usage(
     val completion_tokens: Int,
     val total_tokens: Int
 )
+
+@Composable
+inline fun <reified T : Any> rememberLookup(): T {
+    val context = LocalContext.current
+    return remember { context.lookup<T>() }
+}
+
+inline fun <reified T : Any> Context.lookup(): T {
+    return (applicationContext as App).serviceLocator.get<T>()
+}

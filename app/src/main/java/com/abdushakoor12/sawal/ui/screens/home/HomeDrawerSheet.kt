@@ -13,20 +13,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.abdushakoor12.sawal.App
 import com.abdushakoor12.sawal.database.ChatEntity
+import com.abdushakoor12.sawal.database.ChatEntityDao
+import com.abdushakoor12.sawal.rememberLookup
 import com.abdushakoor12.sawal.utils.ext.timeAgo
 
 @Composable
 fun HomeDrawerSheet(
     onChatSelected: (ChatEntity) -> Unit = {},
 ) {
-    val context = LocalContext.current
-    val chatEntityDao = App.of(context).appDatabase.chatEntityDao()
+    val chatEntityDao = rememberLookup<ChatEntityDao>()
 
     val chats by chatEntityDao.getAllChatsFlow().collectAsStateWithLifecycle(emptyList())
 

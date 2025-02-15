@@ -55,9 +55,12 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.abdushakoor12.sawal.AIModel
-import com.abdushakoor12.sawal.App
+import com.abdushakoor12.sawal.AIRepo
+import com.abdushakoor12.sawal.PrefManager
+import com.abdushakoor12.sawal.database.AppDatabase
 import com.abdushakoor12.sawal.database.ChatEntity
 import com.abdushakoor12.sawal.database.ChatMessageEntity
+import com.abdushakoor12.sawal.rememberLookup
 import com.abdushakoor12.sawal.ui.screens.settings.SettingsScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -140,22 +143,24 @@ fun HomeScreenContent(
 
     var messages by remember { mutableStateOf(listOf<ChatMessageEntity>()) }
 
-    val context = LocalContext.current
+    val prefManager = rememberLookup<PrefManager>()
 
-    var selectedModel by remember { mutableStateOf(App.of(context).prefManager.selectedModel()) }
+    var selectedModel = remember { prefManager.selectedModel() }
 
-    val repo = App.of(context).repo
-    val database = App.of(context).appDatabase
+    val repo = rememberLookup<AIRepo>()
+    val database = rememberLookup<AppDatabase>()
 
     val scope = rememberCoroutineScope()
 
-    val isKeySet by App.of(context).prefManager.isKeySetFlow.collectAsState(initial = false)
+    val context = LocalContext.current
+
+    val isKeySet by prefManager.isKeySetFlow.collectAsState(initial = false)
 
     var showModelChooser by remember { mutableStateOf(false) }
 
     LaunchedEffect(chatEntity?.uuid) {
         if (chatEntity != null) {
-            database.chatMessageEntityDao().getAllMessagesFlow(chatEntity!!.uuid)
+            database.chatMessageEntityDao().getAllMessagesFlow(chatEntity.uuid)
                 .collect {
                     messages = it
                 }
@@ -197,7 +202,7 @@ fun HomeScreenContent(
                                 .fillMaxWidth()
                                 .clickable {
                                     selectedModel = model.id
-                                    App.of(context).prefManager.setSelectedModel(model.id)
+                                    prefManager.setSelectedModel(model.id)
                                     showModelChooser = false
                                 }
                                 .padding(8.dp),
@@ -311,7 +316,7 @@ fun HomeScreenContent(
 
                 Button(
                     onClick = {
-                        App.of(context).prefManager.setOpenRouterApiKey(apiKey)
+                        prefManager.setOpenRouterApiKey(apiKey)
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
