@@ -7,7 +7,7 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.10.0"
-composeBom = "2024.04.01"
+composeBom = "2025.02.00"
 roomVersion = "2.6.1"
 voyager = "1.1.0-beta02"
 
