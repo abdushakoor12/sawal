@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -48,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -63,6 +65,7 @@ import com.abdushakoor12.sawal.database.ChatEntity
 import com.abdushakoor12.sawal.database.ChatMessageEntity
 import com.abdushakoor12.sawal.database.OpenRouterModelEntity
 import com.abdushakoor12.sawal.ui.screens.settings.SettingsScreen
+import com.abdushakoor12.sawal.ui.theme.SawalTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -177,54 +180,11 @@ fun HomeScreenContent(
     }
 
     if (showModelChooser && availableModels.isNotEmpty()) {
-        Dialog(onDismissRequest = { showModelChooser = false }) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "Please select a model",
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                ) {
-                    items(availableModels) { model ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    prefManager.setSelectedModel(model.id)
-                                    showModelChooser = false
-                                }
-                                .padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                model.name,
-                                modifier = Modifier
-                                    .padding(2.dp)
-                                    .background(
-                                        MaterialTheme.colorScheme.primary,
-                                        shape = RoundedCornerShape(4.dp)
-                                    )
-                                    .padding(3.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        ModelChooseDialog(
+            availableModels = availableModels,
+            onChange = { prefManager.setSelectedModel(it.id) },
+            onClose = { showModelChooser = false }
+        )
     }
 
     fun onSendMessage() {
@@ -401,5 +361,129 @@ fun HomeScreenContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ModelChooseDialog(
+    availableModels: List<OpenRouterModelEntity>,
+    onChange: (OpenRouterModelEntity) -> Unit,
+    onClose: () -> Unit
+) {
+    Dialog(onDismissRequest = onClose) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Please select a model",
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            ) {
+                items(availableModels) { model ->
+
+                    var expanded by remember { mutableStateOf(false) }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(2.dp)
+                            .background(
+                                MaterialTheme.colorScheme.primary,
+                                shape = RoundedCornerShape(4.dp)
+                            )
+                            .clickable {
+                                onChange(model)
+                                onClose()
+                            }
+                            .padding(8.dp),
+                    ) {
+                        val pricesList = listOf(
+                            Pair(model.pricePerPrompt, "prompt"),
+                            Pair(model.pricePerCompletion, "completion"),
+                            Pair(model.pricePerImage, "image"),
+                            Pair(model.pricePerRequest, "request"),
+                        ).filter { it.first != "0" }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+
+                            ) {
+                            Text(
+                                model.name,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(2.dp),
+                                lineHeight = 14.sp,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+
+                            if (pricesList.isNotEmpty()) {
+                                IconButton(onClick = { expanded = !expanded }) {
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowDown,
+                                        contentDescription = "Expand",
+                                        tint = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                }
+                            }
+                        }
+
+                        if (expanded) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            pricesList.forEach { (price, type) ->
+                                Text(
+                                    "${price}/$type",
+                                    lineHeight = 8.sp,
+                                    fontSize = 8.sp,
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+fun ModelChooseDialogPreview() {
+    SawalTheme {
+        ModelChooseDialog(
+            availableModels = listOf(
+                OpenRouterModelEntity(
+                    id = "123",
+                    name = "Model 1",
+                    pricePerPrompt = "100",
+                    pricePerCompletion = "200",
+                    pricePerImage = "300",
+                    pricePerRequest = "400",
+                ),
+                OpenRouterModelEntity(
+                    id = "456",
+                    name = "Model 2",
+                    pricePerPrompt = "500",
+                    pricePerCompletion = "600",
+                    pricePerImage = "700",
+                    pricePerRequest = "800",
+                ),
+            ),
+            onChange = {},
+            onClose = {}
+        )
     }
 }
