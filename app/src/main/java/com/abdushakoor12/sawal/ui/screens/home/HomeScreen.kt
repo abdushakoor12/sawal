@@ -54,13 +54,13 @@ import androidx.compose.ui.window.Dialog
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import com.abdushakoor12.sawal.AIModel
-import com.abdushakoor12.sawal.AIRepo
-import com.abdushakoor12.sawal.PrefManager
+import com.abdushakoor12.sawal.core.AIModel
+import com.abdushakoor12.sawal.core.AIRepo
+import com.abdushakoor12.sawal.core.PrefManager
+import com.abdushakoor12.sawal.core.rememberLookup
 import com.abdushakoor12.sawal.database.AppDatabase
 import com.abdushakoor12.sawal.database.ChatEntity
 import com.abdushakoor12.sawal.database.ChatMessageEntity
-import com.abdushakoor12.sawal.rememberLookup
 import com.abdushakoor12.sawal.ui.screens.settings.SettingsScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

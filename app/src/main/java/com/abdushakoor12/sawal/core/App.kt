@@ -1,17 +1,11 @@
-package com.abdushakoor12.sawal
+package com.abdushakoor12.sawal.core
 
-import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import com.abdushakoor12.sawal.core.ServiceLocator
 import com.abdushakoor12.sawal.database.AppDatabase
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -62,47 +56,6 @@ class AIRepo(
     )
 
     suspend fun getAvailableModels() = api.getAvailableModels()
-}
-
-@SuppressLint("ApplySharedPref")
-class PrefManager(
-    context: Context
-) {
-    private val sharedPreferences = context.getSharedPreferences("prefs", Context.MODE_PRIVATE)
-
-    val isKeySetFlow: Flow<Boolean> = callbackFlow {
-        val apiKey = getOpenRouterApiKey()
-        trySend(apiKey != null)
-
-        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == "openrouter_api_key") {
-                trySend(getOpenRouterApiKey() != null)
-            }
-        }
-
-        sharedPreferences.registerOnSharedPreferenceChangeListener(listener)
-
-        awaitClose {
-            sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener)
-        }
-    }
-
-    fun getOpenRouterApiKey(): String? {
-        return sharedPreferences.getString("openrouter_api_key", null)
-    }
-
-    fun selectedModel(): String {
-        val defaultModel = "google/gemini-2.0-flash-lite-preview-02-05:free"
-        return sharedPreferences.getString("selected_model", defaultModel) ?: defaultModel
-    }
-
-    fun setSelectedModel(model: String) {
-        sharedPreferences.edit().putString("selected_model", model).commit()
-    }
-
-    fun setOpenRouterApiKey(apiKey: String) {
-        sharedPreferences.edit().putString("openrouter_api_key", apiKey).commit()
-    }
 }
 
 object RetrofitInstance {

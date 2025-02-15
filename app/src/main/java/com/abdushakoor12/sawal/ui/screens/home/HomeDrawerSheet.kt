@@ -16,9 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.abdushakoor12.sawal.core.rememberLookup
 import com.abdushakoor12.sawal.database.ChatEntity
 import com.abdushakoor12.sawal.database.ChatEntityDao
-import com.abdushakoor12.sawal.rememberLookup
 import com.abdushakoor12.sawal.utils.ext.timeAgo
 
 @Composable
