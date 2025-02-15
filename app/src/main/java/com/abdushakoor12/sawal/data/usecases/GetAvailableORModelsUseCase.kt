@@ -13,7 +13,7 @@ class GetAvailableORModelsUseCase(
     private val aiRepo: AIRepo,
     private val orModelDao: OrModelEntityDao,
 ) {
-    fun invoke(): Flow<List<OpenRouterModelEntity>> = flow {
+    operator fun invoke(): Flow<List<OpenRouterModelEntity>> = flow {
         val savedModels = orModelDao.getAllModels()
         emit(savedModels)
 

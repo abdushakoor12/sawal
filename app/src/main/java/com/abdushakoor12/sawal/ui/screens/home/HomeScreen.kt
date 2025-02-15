@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
@@ -60,7 +61,6 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.abdushakoor12.sawal.core.AIRepo
 import com.abdushakoor12.sawal.core.PrefManager
 import com.abdushakoor12.sawal.core.rememberLookup
-import com.abdushakoor12.sawal.data.usecases.GetAvailableORModelsUseCase
 import com.abdushakoor12.sawal.database.AppDatabase
 import com.abdushakoor12.sawal.database.ChatEntity
 import com.abdushakoor12.sawal.database.ChatMessageEntity
@@ -77,11 +77,26 @@ class HomeScreen : Screen {
     override fun Content() {
         val viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
 
+        val availableModels by viewModel.availableModels.collectAsState()
+
         val navigator = LocalNavigator.currentOrThrow
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
 
+        var showModelChooser by remember { mutableStateOf(false) }
+
         var chatEntity by remember { mutableStateOf<ChatEntity?>(null) }
+
+        val prefManager = rememberLookup<PrefManager>()
+        val selectedModel by prefManager.selectedModelFlow.collectAsState(initial = "google/gemini-2.0-flash-lite-preview-02-05:free")
+
+        if (showModelChooser && availableModels.isNotEmpty()) {
+            ModelChooseDialog(
+                availableModels = availableModels,
+                onChange = { prefManager.setSelectedModel(it.id) },
+                onClose = { showModelChooser = false }
+            )
+        }
 
         ModalNavigationDrawer(
             drawerState = drawerState,
@@ -99,7 +114,12 @@ class HomeScreen : Screen {
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        title = { Text("") },
+                        title = {
+                            Text(
+                                selectedModel,
+                                fontSize = 12.sp,
+                            )
+                        },
                         navigationIcon = {
                             IconButton(onClick = {
                                 scope.launch { drawerState.open() }
@@ -111,6 +131,12 @@ class HomeScreen : Screen {
                             }
                         },
                         actions = {
+                            IconButton(onClick = { showModelChooser = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit Model"
+                                )
+                            }
                             IconButton(onClick = {
                                 navigator.push(SettingsScreen())
                             }) {
@@ -140,12 +166,7 @@ fun HomeScreenContent(
     chatEntity: ChatEntity? = null,
     onUpdateChatEntity: (ChatEntity) -> Unit,
 ) {
-
-    val getAvailableORModelsUseCase = rememberLookup<GetAvailableORModelsUseCase>()
-
     var msg by remember { mutableStateOf("") }
-
-    var availableModels by remember { mutableStateOf(listOf<OpenRouterModelEntity>()) }
 
     var loading by remember { mutableStateOf(false) }
 
@@ -165,7 +186,6 @@ fun HomeScreenContent(
 
     val isKeySet by prefManager.isKeySetFlow.collectAsState(initial = false)
 
-    var showModelChooser by remember { mutableStateOf(false) }
 
     LaunchedEffect(chatEntity?.uuid) {
         if (chatEntity != null) {
@@ -176,19 +196,6 @@ fun HomeScreenContent(
         }
     }
 
-    LaunchedEffect(Unit) {
-        getAvailableORModelsUseCase.invoke().collect {
-            availableModels = it
-        }
-    }
-
-    if (showModelChooser && availableModels.isNotEmpty()) {
-        ModelChooseDialog(
-            availableModels = availableModels,
-            onChange = { prefManager.setSelectedModel(it.id) },
-            onClose = { showModelChooser = false }
-        )
-    }
 
     fun onSendMessage() {
         val newMessage = msg.trim()
@@ -294,30 +301,6 @@ fun HomeScreenContent(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = selectedModel,
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable {
-                        showModelChooser = true
-                    }
-                    .padding(4.dp)
-                    .background(
-                        MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(4.dp)
-                    )
-                    .padding(3.dp),
-                color = MaterialTheme.colorScheme.onPrimary,
-                textAlign = TextAlign.Center
-            )
-        }
 
         LazyColumn(
             modifier = Modifier
