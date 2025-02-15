@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import com.abdushakoor12.sawal.data.usecases.GetAvailableORModelsUseCase
 import com.abdushakoor12.sawal.database.AppDatabase
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -35,6 +36,7 @@ class App : Application() {
             .addSingleton(appDatabase)
             .addSingleton(appDatabase.chatEntityDao())
             .addSingleton(appDatabase.chatMessageEntityDao())
+            .addSingleton(GetAvailableORModelsUseCase(repo, appDatabase.orModelEntityDao()))
             .build()
     }
 }
@@ -55,7 +57,10 @@ class AIRepo(
         )
     )
 
-    suspend fun getAvailableModels() = api.getAvailableModels()
+    suspend fun getAvailableModels(): Result<ModelsResponse> =
+        Result.runCatching {
+            api.getAvailableModels()
+        }
 }
 
 object RetrofitInstance {
