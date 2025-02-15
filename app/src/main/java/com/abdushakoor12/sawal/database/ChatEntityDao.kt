@@ -16,6 +16,6 @@ interface ChatEntityDao {
     @Delete
     suspend fun delete(chatEntity: ChatEntity)
 
-    @Query("SELECT * FROM chatentity")
+    @Query("SELECT * FROM chatentity ORDER BY createdAt DESC")
     fun getAllChatsFlow(): Flow<List<ChatEntity>>
 }

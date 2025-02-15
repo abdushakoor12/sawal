@@ -19,18 +19,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,7 +47,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,7 +56,6 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.abdushakoor12.sawal.AIModel
 import com.abdushakoor12.sawal.App
-import com.abdushakoor12.sawal.R
 import com.abdushakoor12.sawal.database.ChatEntity
 import com.abdushakoor12.sawal.database.ChatMessageEntity
 import com.abdushakoor12.sawal.ui.screens.settings.SettingsScreen
@@ -65,34 +68,65 @@ class HomeScreen : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+        val scope = rememberCoroutineScope()
 
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(stringResource(R.string.app_name)) },
-                    actions = {
-                        IconButton(onClick = {
-                            navigator.push(SettingsScreen())
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "Settings"
-                            )
-                        }
-                    }
-                )
+        var chatEntity by remember { mutableStateOf<ChatEntity?>(null) }
+
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                ModalDrawerSheet {
+                    HomeDrawerSheet(
+                        onChatSelected = { chatEntity = it }
+                    )
+                }
             },
-            modifier = Modifier.fillMaxSize()
-        ) { innerPadding ->
-            HomeScreenContent(
-                modifier = Modifier.padding(innerPadding)
-            )
+        ) {
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text("") },
+                        navigationIcon = {
+                            IconButton(onClick = {
+                                scope.launch { drawerState.open() }
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Menu,
+                                    contentDescription = "Menu"
+                                )
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = {
+                                navigator.push(SettingsScreen())
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Settings"
+                                )
+                            }
+                        }
+                    )
+                },
+                modifier = Modifier.fillMaxSize()
+            ) { innerPadding ->
+                HomeScreenContent(
+                    modifier = Modifier.padding(innerPadding),
+                    chatEntity = chatEntity,
+                    onUpdateChatEntity = { chatEntity = it }
+                )
+            }
         }
     }
 }
 
 @Composable
-fun HomeScreenContent(modifier: Modifier = Modifier) {
+fun HomeScreenContent(
+    modifier: Modifier = Modifier,
+    chatEntity: ChatEntity? = null,
+    onUpdateChatEntity: (ChatEntity) -> Unit,
+) {
 
     var msg by remember { mutableStateOf("") }
 
@@ -100,7 +134,6 @@ fun HomeScreenContent(modifier: Modifier = Modifier) {
 
     var loading by remember { mutableStateOf(false) }
 
-    var chatEntity by remember { mutableStateOf<ChatEntity?>(null) }
 
     var messages by remember { mutableStateOf(listOf<ChatMessageEntity>()) }
 
@@ -193,7 +226,7 @@ fun HomeScreenContent(modifier: Modifier = Modifier) {
         val chat = chatEntity ?: ChatEntity(
             title = newMessage,
         ).also { chat ->
-            chatEntity = chat
+            onUpdateChatEntity(chat)
             scope.launch(Dispatchers.IO) {
                 database.chatEntityDao().insert(chat)
             }
@@ -230,7 +263,7 @@ fun HomeScreenContent(modifier: Modifier = Modifier) {
                             .insert(
                                 ChatMessageEntity(
                                     role = it.role, message = it.content,
-                                    chatId = chatEntity!!.uuid,
+                                    chatId = chatEntity.uuid,
                                 )
                             )
 
