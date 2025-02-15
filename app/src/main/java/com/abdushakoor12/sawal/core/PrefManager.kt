@@ -3,6 +3,7 @@ package com.abdushakoor12.sawal.core
 import android.annotation.SuppressLint
 import android.content.Context
 import com.abdushakoor12.sawal.utils.ext.stringFlow
+import com.abdushakoor12.sawal.utils.ext.stringNotNullFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -19,10 +20,10 @@ class PrefManager(
         return sharedPreferences.getString("openrouter_api_key", null)
     }
 
-    fun selectedModel(): String {
-        val defaultModel = "google/gemini-2.0-flash-lite-preview-02-05:free"
-        return sharedPreferences.getString("selected_model", defaultModel) ?: defaultModel
-    }
+    val selectedModelFlow: Flow<String> = sharedPreferences.stringNotNullFlow(
+        "selected_model",
+        "google/gemini-2.0-flash-lite-preview-02-05:free"
+    )
 
     fun setSelectedModel(model: String) {
         sharedPreferences.edit().putString("selected_model", model).commit()

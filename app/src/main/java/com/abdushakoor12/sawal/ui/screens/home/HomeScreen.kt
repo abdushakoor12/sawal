@@ -148,7 +148,7 @@ fun HomeScreenContent(
 
     val prefManager = rememberLookup<PrefManager>()
 
-    var selectedModel = remember { prefManager.selectedModel() }
+    val selectedModel by prefManager.selectedModelFlow.collectAsState(initial = "google/gemini-2.0-flash-lite-preview-02-05:free")
 
     val repo = rememberLookup<AIRepo>()
     val database = rememberLookup<AppDatabase>()
@@ -202,7 +202,6 @@ fun HomeScreenContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    selectedModel = model.id
                                     prefManager.setSelectedModel(model.id)
                                     showModelChooser = false
                                 }
