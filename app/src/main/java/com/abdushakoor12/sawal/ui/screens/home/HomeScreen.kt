@@ -78,7 +78,10 @@ class HomeScreen : Screen {
             drawerContent = {
                 ModalDrawerSheet {
                     HomeDrawerSheet(
-                        onChatSelected = { chatEntity = it }
+                        onChatSelected = {
+                            chatEntity = it
+                            scope.launch { drawerState.close() }
+                        }
                     )
                 }
             },
