@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.abdushakoor12.sawal.database.ChatMessageEntity
+import com.abdushakoor12.sawal.ui.icons.ContentCopyIcon
+import com.abdushakoor12.sawal.ui.icons.ShareIcon
 import com.abdushakoor12.sawal.ui.theme.SawalTheme
 import com.abdushakoor12.sawal.utils.ext.copyTextToClipboard
 import com.abdushakoor12.sawal.utils.ext.shareText
@@ -64,6 +67,9 @@ fun ChatMessageView(message: ChatMessageEntity) {
                 text = {
                     Text("Copy")
                 },
+                leadingIcon = {
+                    Icon(ContentCopyIcon, contentDescription = "Copy")
+                },
                 onClick = {
                     context.copyTextToClipboard(message.message)
                     menuOpened = false
@@ -73,6 +79,9 @@ fun ChatMessageView(message: ChatMessageEntity) {
             DropdownMenuItem(
                 text = {
                     Text("Share")
+                },
+                leadingIcon = {
+                    Icon(ShareIcon, contentDescription = "Share")
                 },
                 onClick = {
                     context.shareText(message.message)
