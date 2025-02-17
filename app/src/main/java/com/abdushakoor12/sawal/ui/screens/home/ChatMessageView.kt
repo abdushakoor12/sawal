@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -31,7 +34,10 @@ import com.abdushakoor12.sawal.utils.ext.copyTextToClipboard
 import com.abdushakoor12.sawal.utils.ext.shareText
 
 @Composable
-fun ChatMessageView(message: ChatMessageEntity) {
+fun ChatMessageView(
+    message: ChatMessageEntity,
+    onToggleFav: (ChatMessageEntity) -> Unit = {},
+) {
 
     var menuOpened by remember { mutableStateOf(false) }
 
@@ -85,6 +91,24 @@ fun ChatMessageView(message: ChatMessageEntity) {
                 },
                 onClick = {
                     context.shareText(message.message)
+                    menuOpened = false
+                }
+            )
+
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (message.fav) "Unfavorite" else "Favorite"
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        if (message.fav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (message.fav) "Unfavorite" else "Favorite"
+                    )
+                },
+                onClick = {
+                    onToggleFav(message)
                     menuOpened = false
                 }
             )

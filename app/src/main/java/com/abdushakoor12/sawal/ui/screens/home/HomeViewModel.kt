@@ -119,6 +119,12 @@ class HomeViewModel(
         }
     }
 
+    fun toggleFav(msg: ChatMessageEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            chatMessageEntityDao.update(msg.copy(fav = !msg.fav))
+        }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {

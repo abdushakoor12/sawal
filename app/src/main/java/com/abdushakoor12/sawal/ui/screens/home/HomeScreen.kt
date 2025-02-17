@@ -149,6 +149,7 @@ class HomeScreen : Screen {
                     msg = msg,
                     onChangeMsg = { viewModel.updateMsg(it) },
                     onSendMessage = { viewModel.onSendMessage(selectedModel) },
+                    onToggleFav = { viewModel.toggleFav(it) },
                 )
             }
         }
@@ -163,6 +164,7 @@ fun HomeScreenContent(
     onChangeMsg: (String) -> Unit,
     messages: List<ChatMessageEntity>,
     onSendMessage: () -> Unit,
+    onToggleFav: (ChatMessageEntity) -> Unit,
 ) {
     val prefManager = rememberLookup<PrefManager>()
 
@@ -221,7 +223,7 @@ fun HomeScreenContent(
             reverseLayout = true
         ) {
             items(messages) { message ->
-                ChatMessageView(message)
+                ChatMessageView(message, onToggleFav = onToggleFav)
             }
         }
 

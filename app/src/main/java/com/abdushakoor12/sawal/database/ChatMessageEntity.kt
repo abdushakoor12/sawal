@@ -1,5 +1,6 @@
 package com.abdushakoor12.sawal.database
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.util.UUID
@@ -12,4 +13,7 @@ data class ChatMessageEntity(
     val message: String,
     var role: String,
     val createdAt: Long = System.currentTimeMillis(),
+
+    @ColumnInfo(defaultValue = "false")
+    val fav: Boolean = false,
 )

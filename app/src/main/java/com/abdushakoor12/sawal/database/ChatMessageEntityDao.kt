@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -18,4 +19,7 @@ interface ChatMessageEntityDao {
 
     @Query("SELECT * FROM chatmessageentity WHERE chatId = :chatId ORDER BY createdAt DESC")
     fun getAllMessagesFlow(chatId: String): Flow<List<ChatMessageEntity>>
+
+    @Update
+    suspend fun update(copy: ChatMessageEntity)
 }
