@@ -1,3 +1,5 @@
+![Sawal Logo](assets/icon.png)
+
 # Sawal
 
 A Chat interface for android apps to have a chat with AI Models
