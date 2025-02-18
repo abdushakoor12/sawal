@@ -16,6 +16,7 @@ import com.abdushakoor12.sawal.database.ChatEntity
 import com.abdushakoor12.sawal.database.ChatEntityDao
 import com.abdushakoor12.sawal.database.ChatMessageEntity
 import com.abdushakoor12.sawal.database.ChatMessageEntityDao
+import com.abdushakoor12.sawal.database.toMessageModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,13 +80,13 @@ class HomeViewModel(
                 )
             )
 
-            chatMessageEntityDao.insert(
-                ChatMessageEntity(
-                    chatId = chatId,
-                    message = message,
-                    role = "user"
-                )
+            val chatMessage = ChatMessageEntity(
+                chatId = chatId,
+                message = message,
+                role = "user"
             )
+
+            chatMessageEntityDao.insert(chatMessage)
 
             _loading.update { true }
 
@@ -93,7 +94,7 @@ class HomeViewModel(
                 val result = withContext(Dispatchers.IO) {
                     repo.sendMessage(
                         model = selectedModel,
-                        message = message,
+                        messages = listOf(chatMessage.toMessageModel()),
                     )
                 }
                 result.choices.firstOrNull()?.message?.let {
@@ -108,13 +109,14 @@ class HomeViewModel(
 
                     }
                 }
+
+                updateMsg("")
             } catch (e: Exception) {
                 Log.e("HomeScreen", "onSendMessage: ${e.message}", e)
                 // TODO: handle sending toast messages
 //                Toast.makeText(context, "Failed to send message", Toast.LENGTH_SHORT).show()
             } finally {
                 _loading.update { false }
-                updateMsg("")
             }
         }
     }
