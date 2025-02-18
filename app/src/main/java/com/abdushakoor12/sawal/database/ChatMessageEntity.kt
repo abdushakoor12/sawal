@@ -3,6 +3,7 @@ package com.abdushakoor12.sawal.database
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.abdushakoor12.sawal.data.network.MessageModel
 import java.util.UUID
 
 @Entity
@@ -17,3 +18,5 @@ data class ChatMessageEntity(
     @ColumnInfo(defaultValue = "false")
     val fav: Boolean = false,
 )
+
+fun ChatMessageEntity.toMessageModel() = MessageModel(role, message)

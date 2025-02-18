@@ -5,8 +5,9 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import com.abdushakoor12.sawal.data.network.OpenAIApi
-import com.abdushakoor12.sawal.data.network.RetrofitInstance
+import com.abdushakoor12.sawal.data.network.ApiClient
+import com.abdushakoor12.sawal.data.network.MessageModel
+import com.abdushakoor12.sawal.data.network.MessageRequest
 import com.abdushakoor12.sawal.data.responses.ModelsResponse
 import com.abdushakoor12.sawal.data.usecases.GetAvailableORModelsUseCase
 import com.abdushakoor12.sawal.database.AppDatabase
@@ -19,7 +20,7 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        val api = RetrofitInstance.getInstance().create(OpenAIApi::class.java)
+        val api = ApiClient()
 
         val prefManager = PrefManager(applicationContext)
         val repo = AIRepo(api, prefManager)
@@ -38,18 +39,17 @@ class App : Application() {
 }
 
 class AIRepo(
-    private val api: OpenAIApi,
+    private val api: ApiClient,
     private val prefManager: PrefManager
 ) {
     suspend fun sendMessage(
         model: String = "google/gemini-2.0-flash-lite-preview-02-05:free",
-        message: String,
+        messages: List<MessageModel>,
     ) = api.getCompletions(
         "Bearer ${prefManager.getOpenRouterApiKey()}",
-        mapOf(
-            "model" to model, "messages" to listOf(
-                mapOf("role" to "user", "content" to message)
-            )
+        MessageRequest(
+            model = model,
+            messages = messages
         )
     )
 
