@@ -216,7 +216,8 @@ fun HomeScreenContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
         LazyColumn(
@@ -242,6 +243,18 @@ fun HomeScreenContent(
             items(messages) { message ->
                 ChatMessageView(message, onToggleFav = onToggleFav)
             }
+        }
+
+        if (messages.isEmpty()) {
+            Text(
+                "How can I help you?",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                textAlign = TextAlign.Center,
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
         }
 
         Row(
