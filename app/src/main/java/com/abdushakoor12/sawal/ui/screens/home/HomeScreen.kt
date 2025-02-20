@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
@@ -57,6 +56,7 @@ import com.abdushakoor12.sawal.core.PrefManager
 import com.abdushakoor12.sawal.core.rememberLookup
 import com.abdushakoor12.sawal.database.ChatMessageEntity
 import com.abdushakoor12.sawal.database.OpenRouterModelEntity
+import com.abdushakoor12.sawal.ui.icons.Robot
 import com.abdushakoor12.sawal.ui.screens.settings.SettingsScreen
 import com.abdushakoor12.sawal.ui.theme.SawalTheme
 import kotlinx.coroutines.launch
@@ -97,6 +97,10 @@ class HomeScreen : Screen {
                         onChatSelected = {
                             viewModel.changeChatId(it.uuid)
                             scope.launch { drawerState.close() }
+                        },
+                        onNewChatSelected = {
+                            viewModel.createNewChat()
+                            scope.launch { drawerState.close() }
                         }
                     )
                 }
@@ -124,7 +128,7 @@ class HomeScreen : Screen {
                         actions = {
                             IconButton(onClick = { showModelChooser = true }) {
                                 Icon(
-                                    imageVector = Icons.Default.Edit,
+                                    Robot,
                                     contentDescription = "Edit Model"
                                 )
                             }

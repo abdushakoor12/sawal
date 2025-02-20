@@ -127,6 +127,10 @@ class HomeViewModel(
         }
     }
 
+    fun createNewChat() {
+        changeChatId(UUID.randomUUID().toString())
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
