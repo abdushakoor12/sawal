@@ -27,7 +27,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -222,13 +221,23 @@ fun HomeScreenContent(
                 .weight(1f),
             reverseLayout = true
         ) {
+            if (loading) {
+                item(key = "Loading Message") {
+                    ChatMessageView(
+                        ChatMessageEntity(
+                            message = "",
+                            role = "assistant",
+                            chatId = "",
+                        ),
+                        dummy = true,
+                        onToggleFav = onToggleFav
+                    )
+                }
+            }
+
             items(messages) { message ->
                 ChatMessageView(message, onToggleFav = onToggleFav)
             }
-        }
-
-        if (loading) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
 
         Row(

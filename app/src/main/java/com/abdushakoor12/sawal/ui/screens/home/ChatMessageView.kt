@@ -36,6 +36,7 @@ import com.abdushakoor12.sawal.utils.ext.shareText
 @Composable
 fun ChatMessageView(
     message: ChatMessageEntity,
+    dummy: Boolean = false,
     onToggleFav: (ChatMessageEntity) -> Unit = {},
 ) {
 
@@ -53,7 +54,11 @@ fun ChatMessageView(
         horizontalArrangement = if (isUserMessage) Arrangement.End else Arrangement.Start
     ) {
         Text(
-            message.message,
+            if (dummy) {
+                "Loading..."
+            } else {
+                message.message
+            },
             modifier = Modifier
                 .padding(2.dp)
                 .background(
@@ -65,53 +70,55 @@ fun ChatMessageView(
             textAlign = if (message.role == "user") TextAlign.End else TextAlign.Start
         )
 
-        DropdownMenu(
-            expanded = menuOpened,
-            onDismissRequest = { menuOpened = false },
-        ) {
-            DropdownMenuItem(
-                text = {
-                    Text("Copy")
-                },
-                leadingIcon = {
-                    Icon(ContentCopyIcon, contentDescription = "Copy")
-                },
-                onClick = {
-                    context.copyTextToClipboard(message.message)
-                    menuOpened = false
-                }
-            )
+        if (!dummy) {
+            DropdownMenu(
+                expanded = menuOpened,
+                onDismissRequest = { menuOpened = false },
+            ) {
+                DropdownMenuItem(
+                    text = {
+                        Text("Copy")
+                    },
+                    leadingIcon = {
+                        Icon(ContentCopyIcon, contentDescription = "Copy")
+                    },
+                    onClick = {
+                        context.copyTextToClipboard(message.message)
+                        menuOpened = false
+                    }
+                )
 
-            DropdownMenuItem(
-                text = {
-                    Text("Share")
-                },
-                leadingIcon = {
-                    Icon(ShareIcon, contentDescription = "Share")
-                },
-                onClick = {
-                    context.shareText(message.message)
-                    menuOpened = false
-                }
-            )
+                DropdownMenuItem(
+                    text = {
+                        Text("Share")
+                    },
+                    leadingIcon = {
+                        Icon(ShareIcon, contentDescription = "Share")
+                    },
+                    onClick = {
+                        context.shareText(message.message)
+                        menuOpened = false
+                    }
+                )
 
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        if (message.fav) "Unfavorite" else "Favorite"
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        if (message.fav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = if (message.fav) "Unfavorite" else "Favorite"
-                    )
-                },
-                onClick = {
-                    onToggleFav(message)
-                    menuOpened = false
-                }
-            )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            if (message.fav) "Unfavorite" else "Favorite"
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            if (message.fav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (message.fav) "Unfavorite" else "Favorite"
+                        )
+                    },
+                    onClick = {
+                        onToggleFav(message)
+                        menuOpened = false
+                    }
+                )
+            }
         }
     }
 }
