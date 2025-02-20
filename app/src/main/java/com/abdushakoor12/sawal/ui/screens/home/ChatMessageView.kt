@@ -50,7 +50,11 @@ fun ChatMessageView(
             .clickable {
                 menuOpened = true
             }
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .padding(
+                end = if (isUserMessage) 0.dp else 12.dp,
+                start = if (isUserMessage) 12.dp else 0.dp,
+            ),
         horizontalArrangement = if (isUserMessage) Arrangement.End else Arrangement.Start
     ) {
         Text(
