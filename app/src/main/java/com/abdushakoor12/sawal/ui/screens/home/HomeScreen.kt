@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -296,17 +297,33 @@ private fun ModelChooseDialog(
     onChange: (OpenRouterModelEntity) -> Unit,
     onClose: () -> Unit
 ) {
+
+    val searchText = remember { mutableStateOf("") }
+    val filteredModels = remember(searchText.value) {
+        availableModels.filter { it.name.contains(searchText.value, true) }
+    }
+
     Dialog(onDismissRequest = onClose) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight(0.75f)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(16.dp)
         ) {
             Text(
-                text = "Please select a model",
+                text = "Please select a model (${filteredModels.size})",
                 fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = searchText.value,
+                onValueChange = { searchText.value = it },
+                label = { Text("Search") },
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -316,7 +333,7 @@ private fun ModelChooseDialog(
                     .fillMaxWidth()
                     .weight(1f),
             ) {
-                items(availableModels) { model ->
+                items(filteredModels) { model ->
 
                     var expanded by remember { mutableStateOf(false) }
 
