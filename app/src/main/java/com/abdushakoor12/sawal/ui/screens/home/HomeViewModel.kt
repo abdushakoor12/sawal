@@ -93,6 +93,8 @@ class HomeViewModel(
                 )
             )
 
+            updateMsg("")
+
             val chatMessage = ChatMessageEntity(
                 chatId = chatId,
                 message = message,
@@ -123,7 +125,6 @@ class HomeViewModel(
                     }
                 }
 
-                updateMsg("")
             } catch (e: Exception) {
                 Log.e("HomeScreen", "onSendMessage: ${e.message}", e)
                 // TODO: handle sending toast messages
