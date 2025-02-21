@@ -11,6 +11,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.abdushakoor12.sawal.core.AIRepo
 import com.abdushakoor12.sawal.core.App
+import com.abdushakoor12.sawal.core.PrefManager
 import com.abdushakoor12.sawal.data.usecases.GetAvailableORModelsUseCase
 import com.abdushakoor12.sawal.database.ChatEntity
 import com.abdushakoor12.sawal.database.ChatEntityDao
@@ -22,6 +23,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -35,11 +37,18 @@ class HomeViewModel(
     private val chatMessageEntityDao: ChatMessageEntityDao,
     private val repo: AIRepo,
     getAvailableORModelsUseCase: GetAvailableORModelsUseCase,
+    private val prefManager: PrefManager,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val currentChatId =
         savedStateHandle.getStateFlow("chatId", UUID.randomUUID().toString())
     val msg = savedStateHandle.getStateFlow("msg", "")
+
+    val currentModelId = prefManager.selectedModelFlow.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(),
+        "google/gemini-2.0-flash-lite-preview-02-05:free"
+    )
 
     val messages = currentChatId.flatMapLatest { chatId ->
         chatMessageEntityDao.getAllMessagesFlow(chatId)
@@ -58,6 +67,10 @@ class HomeViewModel(
         emptyList()
     )
 
+    val currentModel = combine(currentModelId, availableModels) { id, models ->
+        models.find { it.id == id }
+    }
+
     fun updateMsg(newValue: String) {
         savedStateHandle["msg"] = newValue
     }
@@ -66,8 +79,8 @@ class HomeViewModel(
         savedStateHandle["chatId"] = chatId
     }
 
-    // TODO: pick model from this viewmodel too
-    fun onSendMessage(selectedModel: String) {
+    fun onSendMessage() {
+        val selectedModel = currentModelId.value
         val message = msg.value.trim()
         val chatId = currentChatId.value
         if (message.isBlank() || chatId.isBlank()) return
@@ -137,6 +150,7 @@ class HomeViewModel(
                 val savedStateHandle = createSavedStateHandle()
                 val locator = (this[APPLICATION_KEY] as App).serviceLocator
                 HomeViewModel(
+                    locator.get(),
                     locator.get(),
                     locator.get(),
                     locator.get(),

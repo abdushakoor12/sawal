@@ -80,7 +80,8 @@ class HomeScreen : Screen {
         var showModelChooser by remember { mutableStateOf(false) }
 
         val prefManager = rememberLookup<PrefManager>()
-        val selectedModel by prefManager.selectedModelFlow.collectAsState(initial = "google/gemini-2.0-flash-lite-preview-02-05:free")
+        val selectedModelId by viewModel.currentModelId.collectAsState()
+        val selectedModel by viewModel.currentModel.collectAsState(null)
 
         if (showModelChooser && availableModels.isNotEmpty()) {
             ModelChooseDialog(
@@ -112,7 +113,7 @@ class HomeScreen : Screen {
                     TopAppBar(
                         title = {
                             Text(
-                                selectedModel,
+                                selectedModel?.name ?: selectedModelId,
                                 fontSize = 12.sp,
                             )
                         },
@@ -152,7 +153,7 @@ class HomeScreen : Screen {
                     loading = loading,
                     msg = msg,
                     onChangeMsg = { viewModel.updateMsg(it) },
-                    onSendMessage = { viewModel.onSendMessage(selectedModel) },
+                    onSendMessage = { viewModel.onSendMessage() },
                     onToggleFav = { viewModel.toggleFav(it) },
                 )
             }
