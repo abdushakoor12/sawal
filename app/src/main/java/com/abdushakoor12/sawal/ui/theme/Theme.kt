@@ -1,6 +1,5 @@
 package com.abdushakoor12.sawal.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -35,11 +34,17 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun SawalTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode = ThemeMode.System,
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val darkTheme = when (themeMode) {
+        ThemeMode.System -> isSystemInDarkTheme()
+        ThemeMode.Light -> false
+        ThemeMode.Dark -> true
+    }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
@@ -55,4 +60,8 @@ fun SawalTheme(
         typography = Typography,
         content = content
     )
+}
+
+enum class ThemeMode {
+    System, Light, Dark
 }

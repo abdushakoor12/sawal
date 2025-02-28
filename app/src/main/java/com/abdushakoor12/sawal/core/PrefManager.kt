@@ -2,6 +2,7 @@ package com.abdushakoor12.sawal.core
 
 import android.annotation.SuppressLint
 import android.content.Context
+import com.abdushakoor12.sawal.ui.theme.ThemeMode
 import com.abdushakoor12.sawal.utils.ext.stringFlow
 import com.abdushakoor12.sawal.utils.ext.stringNotNullFlow
 import kotlinx.coroutines.flow.Flow
@@ -42,8 +43,4 @@ class PrefManager(
     fun saveThemeMode(themeMode: ThemeMode) {
         sharedPreferences.edit().putString("theme_mode", themeMode.name).commit()
     }
-}
-
-enum class ThemeMode {
-    System, Light, Dark
 }

@@ -23,11 +23,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import cafe.adriel.voyager.core.screen.Screen
 import com.abdushakoor12.sawal.core.PrefManager
-import com.abdushakoor12.sawal.core.ThemeMode
 import com.abdushakoor12.sawal.core.rememberLookup
 import com.abdushakoor12.sawal.ui.icons.Clear_day
 import com.abdushakoor12.sawal.ui.icons.Mode_night
 import com.abdushakoor12.sawal.ui.icons.Night_sight_auto
+import com.abdushakoor12.sawal.ui.theme.ThemeMode
 
 class SettingsScreen : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
