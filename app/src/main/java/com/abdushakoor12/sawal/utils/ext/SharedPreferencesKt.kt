@@ -24,3 +24,20 @@ fun SharedPreferences.stringFlow(key: String): Flow<String?> = callbackFlow {
 
 fun SharedPreferences.stringNotNullFlow(key: String, defaultValue: String): Flow<String> =
     stringFlow(key).map { it ?: defaultValue }
+
+fun SharedPreferences.booleanFlow(key: String, defaultValue: Boolean = false): Flow<Boolean> =
+    callbackFlow {
+        fun sendValue() = trySend(getBoolean(key, defaultValue))
+
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, changedKey ->
+            if (changedKey == key) {
+                sendValue()
+            }
+        }
+        sendValue() // initial value
+
+        registerOnSharedPreferenceChangeListener(listener)
+        awaitClose {
+            unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }

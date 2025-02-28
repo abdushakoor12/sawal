@@ -22,8 +22,12 @@ class MainActivity : ComponentActivity() {
 
             val prefManager = rememberLookup<PrefManager>()
             val selectedThemeMode by prefManager.themeModeFlow.collectAsState(initial = ThemeMode.System)
+            val isDynamicColor by prefManager.isDynamicColorFlow.collectAsState(initial = true)
 
-            SawalTheme(themeMode = selectedThemeMode) {
+            SawalTheme(
+                themeMode = selectedThemeMode,
+                dynamicColor = isDynamicColor
+            ) {
                 Navigator(HomeScreen()) {
                     FadeTransition(it)
                 }
