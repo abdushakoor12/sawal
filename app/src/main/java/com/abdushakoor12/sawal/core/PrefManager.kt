@@ -16,6 +16,12 @@ class PrefManager(
     val isKeySetFlow: Flow<Boolean> =
         sharedPreferences.stringFlow("openrouter_api_key").map { !it.isNullOrBlank() }
 
+    val themeModeFlow: Flow<ThemeMode> =
+        sharedPreferences.stringFlow("theme_mode").map {
+            ThemeMode.entries.find { themeMode -> themeMode.name == it }
+                ?: ThemeMode.System
+        }
+
     fun getOpenRouterApiKey(): String? {
         return sharedPreferences.getString("openrouter_api_key", null)
     }
@@ -32,4 +38,12 @@ class PrefManager(
     fun setOpenRouterApiKey(apiKey: String) {
         sharedPreferences.edit().putString("openrouter_api_key", apiKey).commit()
     }
+
+    fun saveThemeMode(themeMode: ThemeMode) {
+        sharedPreferences.edit().putString("theme_mode", themeMode.name).commit()
+    }
+}
+
+enum class ThemeMode {
+    System, Light, Dark
 }
