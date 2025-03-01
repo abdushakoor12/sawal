@@ -70,6 +70,8 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.client.logging)
     implementation(libs.ktor.serialization.kotlinx.json)
+    implementation("com.github.jeziellago:compose-markdown:0.5.7")
+
 
     implementation(libs.kotlinx.serialization.json)
 
