@@ -1,4 +1,4 @@
-![Sawal Logo](assets/icon.png)
+<img src="assets/icon.png" width="200" alt="Sawal Logo"/>
 
 # Sawal
 
