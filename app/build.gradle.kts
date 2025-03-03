@@ -22,6 +22,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        setProperty("archivesBaseName", "sawal-$versionName")
+
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
         }
