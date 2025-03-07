@@ -29,6 +29,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -51,7 +52,6 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.abdushakoor12.sawal.core.PrefManager
 import com.abdushakoor12.sawal.core.rememberLookup
 import com.abdushakoor12.sawal.database.ChatMessageEntity
-import com.abdushakoor12.sawal.ui.icons.Robot
 import com.abdushakoor12.sawal.ui.screens.select_model.SelectModelScreen
 import com.abdushakoor12.sawal.ui.screens.settings.SettingsScreen
 import kotlinx.coroutines.launch
@@ -95,10 +95,14 @@ class HomeScreen : Screen {
                 topBar = {
                     TopAppBar(
                         title = {
-                            Text(
-                                selectedModel?.name ?: selectedModelId,
-                                fontSize = 12.sp,
-                            )
+                            TextButton(onClick = {
+                                navigator.push(SelectModelScreen())
+                            }) {
+                                Text(
+                                    "${selectedModel?.name ?: selectedModelId} >",
+                                    fontSize = 12.sp,
+                                )
+                            }
                         },
                         navigationIcon = {
                             IconButton(onClick = {
@@ -111,23 +115,13 @@ class HomeScreen : Screen {
                             }
                         },
                         actions = {
-                            if (availableModels.isNotEmpty()) {
-                                IconButton(onClick = {
-                                    navigator.push(SelectModelScreen())
-                                }) {
-                                    Icon(
-                                        Robot,
-                                        contentDescription = "Edit Model"
-                                    )
-                                }
-                                IconButton(onClick = {
-                                    navigator.push(SettingsScreen())
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Settings,
-                                        contentDescription = "Settings"
-                                    )
-                                }
+                            IconButton(onClick = {
+                                navigator.push(SettingsScreen())
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Settings"
+                                )
                             }
                         }
                     )
