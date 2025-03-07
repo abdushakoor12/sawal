@@ -107,9 +107,12 @@ class HomeViewModel(
 
             try {
                 val result = withContext(Dispatchers.IO) {
+                    val currentMessages = messages.value.map { it.toMessageModel() }
+                    val newMessages = currentMessages + chatMessage.toMessageModel()
+
                     repo.sendMessage(
                         model = selectedModel,
-                        messages = listOf(chatMessage.toMessageModel()),
+                        messages = newMessages,
                     )
                 }
                 result.choices.firstOrNull()?.message?.let {
