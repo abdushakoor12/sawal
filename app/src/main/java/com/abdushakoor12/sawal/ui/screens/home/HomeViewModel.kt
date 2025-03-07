@@ -37,7 +37,7 @@ class HomeViewModel(
     private val chatMessageEntityDao: ChatMessageEntityDao,
     private val repo: AIRepo,
     getAvailableORModelsUseCase: GetAvailableORModelsUseCase,
-    private val prefManager: PrefManager,
+    prefManager: PrefManager,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val currentChatId =
