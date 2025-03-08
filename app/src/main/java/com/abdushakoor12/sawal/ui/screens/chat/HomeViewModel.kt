@@ -13,6 +13,7 @@ import com.abdushakoor12.sawal.core.AIRepo
 import com.abdushakoor12.sawal.core.App
 import com.abdushakoor12.sawal.core.PrefManager
 import com.abdushakoor12.sawal.data.usecases.GetAvailableORModelsUseCase
+import com.abdushakoor12.sawal.database.CharacterEntity
 import com.abdushakoor12.sawal.database.ChatEntity
 import com.abdushakoor12.sawal.database.ChatEntityDao
 import com.abdushakoor12.sawal.database.ChatMessageEntity
@@ -43,6 +44,9 @@ class HomeViewModel(
     private val currentChatId =
         savedStateHandle.getStateFlow("chatId", UUID.randomUUID().toString())
     val msg = savedStateHandle.getStateFlow("msg", "")
+
+    private val _currentCharacter = MutableStateFlow<CharacterEntity?>(null)
+    val currentCharacter = _currentCharacter.asStateFlow()
 
     val currentModelId = prefManager.selectedModelFlow.stateIn(
         viewModelScope,
@@ -79,22 +83,35 @@ class HomeViewModel(
         savedStateHandle["chatId"] = chatId
     }
 
+    fun setCharacter(character: CharacterEntity?) {
+        _currentCharacter.value = character
+    }
+
     fun onSendMessage() {
         val selectedModel = currentModelId.value
         val message = msg.value.trim()
         val chatId = currentChatId.value
+        val character = _currentCharacter.value
         if (message.isBlank() || chatId.isBlank()) return
 
         viewModelScope.launch(Dispatchers.IO) {
+            // Update chat title
+            val chatTitle = if (character != null) {
+                "Chat with ${character.name}"
+            } else {
+                message
+            }
+            
             chatEntityDao.insert(
                 ChatEntity(
-                    title = message,
+                    title = chatTitle,
                     uuid = chatId,
                 )
             )
 
             updateMsg("")
 
+            // Create user message
             val chatMessage = ChatMessageEntity(
                 chatId = chatId,
                 message = message,
@@ -108,11 +125,25 @@ class HomeViewModel(
             try {
                 val result = withContext(Dispatchers.IO) {
                     val currentMessages = messages.value.map { it.toMessageModel() }
-                    val newMessages = currentMessages + chatMessage.toMessageModel()
+
+                    // If using a character, add character context at the beginning
+                    val messagesWithContext = if (character != null && currentMessages.isEmpty()) {
+                        // Only add character context for the first message in a conversation
+                        val systemMessage = ChatMessageEntity(
+                            chatId = chatId,
+                            message = "You are ${character.name}. " +
+                                    "Your description: ${character.description}.",
+                            role = "system"
+                        ).toMessageModel()
+
+                        listOf(systemMessage) + currentMessages + chatMessage.toMessageModel()
+                    } else {
+                        currentMessages + chatMessage.toMessageModel()
+                    }
 
                     repo.sendMessage(
                         model = selectedModel,
-                        messages = newMessages,
+                        messages = messagesWithContext,
                     )
                 }
                 result.choices.firstOrNull()?.message?.let {

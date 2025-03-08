@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,6 +55,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.abdushakoor12.sawal.core.PrefManager
 import com.abdushakoor12.sawal.core.rememberLookup
+import com.abdushakoor12.sawal.database.CharacterEntity
 import com.abdushakoor12.sawal.database.ChatMessageEntity
 import com.abdushakoor12.sawal.ui.screens.select_model.SelectModelScreen
 import kotlinx.coroutines.launch
@@ -64,6 +66,7 @@ import kotlinx.parcelize.Parcelize
 data class ChatScreen(
     var initialMessage: String? = null,
     var chatId: String? = null,
+    var character: CharacterEntity? = null,
 ) : Screen, Parcelable {
     @Composable
     override fun Content() {
@@ -79,6 +82,10 @@ data class ChatScreen(
 
             chatId?.let { id ->
                 viewModel.changeChatId(id)
+            }
+
+            character?.let { char ->
+                viewModel.setCharacter(char)
             }
         }
 
@@ -111,19 +118,30 @@ data class ChatScreen(
                 topBar = {
                     TopAppBar(
                         title = {
-                            TextButton(onClick = {
-                                navigator.push(SelectModelScreen())
-                            }) {
-                                Text(
-                                    selectedModel?.name ?: selectedModelId,
-                                    fontSize = 12.sp,
-                                )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (character != null) {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = "Character Icon",
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    )
+                                    Text(character!!.name)
+                                } else {
+                                    TextButton(onClick = {
+                                        navigator.push(SelectModelScreen())
+                                    }) {
+                                        Text(
+                                            selectedModel?.name ?: selectedModelId,
+                                            fontSize = 12.sp,
+                                        )
+                                    }
+                                }
                             }
                         },
                         navigationIcon = {
-                            IconButton(onClick = {
-                                navigator.pop()
-                            }) {
+                            IconButton(onClick = { navigator.pop() }) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Back"
@@ -131,6 +149,17 @@ data class ChatScreen(
                             }
                         },
                         actions = {
+                            if (character != null) {
+                                TextButton(onClick = {
+                                    navigator.push(SelectModelScreen())
+                                }) {
+                                    Text(
+                                        selectedModel?.name ?: selectedModelId,
+                                        fontSize = 12.sp,
+                                    )
+                                }
+                            }
+                            
                             IconButton(onClick = {
                                 scope.launch {
                                     drawerState.open()
@@ -150,7 +179,7 @@ data class ChatScreen(
                                     contentDescription = "New Chat"
                                 )
                             }
-                        },
+                        }
                     )
                 },
                 modifier = Modifier.fillMaxSize()

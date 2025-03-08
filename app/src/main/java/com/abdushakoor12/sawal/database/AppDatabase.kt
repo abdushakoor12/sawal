@@ -7,12 +7,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [ChatEntity::class, ChatMessageEntity::class, OpenRouterModelEntity::class],
-    version = 3,
+    entities = [ChatEntity::class, ChatMessageEntity::class, OpenRouterModelEntity::class, CharacterEntity::class],
+    version = 4,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
+        AutoMigration(from = 3, to = 4),
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -20,6 +21,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun chatEntityDao(): ChatEntityDao
     abstract fun chatMessageEntityDao(): ChatMessageEntityDao
     abstract fun orModelEntityDao(): OrModelEntityDao
+    abstract fun characterEntityDao(): CharacterEntityDao
 
     companion object {
         private const val DATABASE_NAME = "sawal.db"

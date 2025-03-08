@@ -40,7 +40,7 @@ fun ListTile(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = { onClick?.invoke() })
+            .clickable(enabled = enabled && onClick != null, onClick = { onClick?.invoke() })
             .padding(padding),
         verticalAlignment = Alignment.CenterVertically
     ) {
