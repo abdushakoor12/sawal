@@ -1,4 +1,4 @@
-package com.abdushakoor12.sawal.ui.screens.home
+package com.abdushakoor12.sawal.ui.screens.chat
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -8,13 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,7 +25,6 @@ import com.abdushakoor12.sawal.utils.ext.timeAgo
 @Composable
 fun HomeDrawerSheet(
     onChatSelected: (ChatEntity) -> Unit = {},
-    onNewChatSelected: () -> Unit = {},
 ) {
     val chatEntityDao = rememberLookup<ChatEntityDao>()
 
@@ -72,17 +65,5 @@ fun HomeDrawerSheet(
                 }
             }
         }
-
-        NavigationDrawerItem(
-            label = { Text("New Chat") },
-            icon = { Icon(Icons.Default.Add, contentDescription = null) },
-            onClick = { onNewChatSelected() },
-            colors = NavigationDrawerItemDefaults.colors(
-                unselectedContainerColor = MaterialTheme.colorScheme.primary,
-                unselectedTextColor = MaterialTheme.colorScheme.onPrimary,
-                unselectedIconColor = MaterialTheme.colorScheme.onPrimary,
-            ),
-            selected = false,
-        )
     }
 }

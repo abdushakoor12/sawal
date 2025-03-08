@@ -1,4 +1,4 @@
-package com.abdushakoor12.sawal.ui.screens.home
+package com.abdushakoor12.sawal.ui.screens.chat
 
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
