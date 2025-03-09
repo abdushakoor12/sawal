@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -46,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -60,6 +62,9 @@ import com.abdushakoor12.sawal.database.ChatMessageEntity
 import com.abdushakoor12.sawal.ui.screens.select_model.SelectModelScreen
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Parcelize
@@ -118,26 +123,13 @@ data class ChatScreen(
                 topBar = {
                     TopAppBar(
                         title = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (character != null) {
-                                    Icon(
-                                        imageVector = Icons.Default.Person,
-                                        contentDescription = "Character Icon",
-                                        modifier = Modifier.padding(end = 8.dp)
-                                    )
-                                    Text(character!!.name)
-                                } else {
-                                    TextButton(onClick = {
-                                        navigator.push(SelectModelScreen())
-                                    }) {
-                                        Text(
-                                            selectedModel?.name ?: selectedModelId,
-                                            fontSize = 12.sp,
-                                        )
-                                    }
-                                }
+                            TextButton(onClick = {
+                                navigator.push(SelectModelScreen())
+                            }) {
+                                Text(
+                                    selectedModel?.name ?: selectedModelId,
+                                    fontSize = 12.sp,
+                                )
                             }
                         },
                         navigationIcon = {
@@ -149,17 +141,6 @@ data class ChatScreen(
                             }
                         },
                         actions = {
-                            if (character != null) {
-                                TextButton(onClick = {
-                                    navigator.push(SelectModelScreen())
-                                }) {
-                                    Text(
-                                        selectedModel?.name ?: selectedModelId,
-                                        fontSize = 12.sp,
-                                    )
-                                }
-                            }
-                            
                             IconButton(onClick = {
                                 scope.launch {
                                     drawerState.open()
@@ -170,7 +151,7 @@ data class ChatScreen(
                                     contentDescription = "History"
                                 )
                             }
-
+                            
                             IconButton(onClick = {
                                 viewModel.createNewChat()
                             }) {
@@ -192,6 +173,7 @@ data class ChatScreen(
                     onChangeMsg = { viewModel.updateMsg(it) },
                     onSendMessage = { viewModel.onSendMessage() },
                     onToggleFav = { viewModel.toggleFav(it) },
+                    character = character
                 )
             }
         }
@@ -207,6 +189,7 @@ fun HomeScreenContent(
     messages: List<ChatMessageEntity>,
     onSendMessage: () -> Unit,
     onToggleFav: (ChatMessageEntity) -> Unit,
+    character: CharacterEntity? = null
 ) {
     val prefManager = rememberLookup<PrefManager>()
 
@@ -258,6 +241,55 @@ fun HomeScreenContent(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        if (character != null) {
+            var isExpanded by remember { mutableStateOf(false) }
+            
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isExpanded = !isExpanded }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Character Icon",
+                            modifier = Modifier.padding(end = 16.dp)
+                        )
+                        Text(
+                            text = character.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (character.description.isNotBlank()) {
+                            IconButton(onClick = { isExpanded = !isExpanded }) {
+                                Icon(
+                                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (isExpanded) "Collapse" else "Expand"
+                                )
+                            }
+                        }
+                    }
+                    
+                    AnimatedVisibility(visible = isExpanded && character.description.isNotBlank()) {
+                        Text(
+                            text = character.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                        )
+                    }
+                }
+            }
+        }
 
         LazyColumn(
             modifier = Modifier
