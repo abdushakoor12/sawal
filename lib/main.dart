@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'theme/gruvbox.dart';
 import 'models/message.dart';
+import 'data/preferences_service.dart';
+import 'data/openrouter_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -31,16 +33,29 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final List<Message> _messages = [
-    Message(text: 'Hello! How can I help you today?', isUser: false, timestamp: DateTime.now().subtract(const Duration(minutes: 2))),
-    Message(text: 'Hi there! I\'m doing well, thanks for asking.', isUser: true, timestamp: DateTime.now().subtract(const Duration(minutes: 1))),
-    Message(text: 'That\'s great to hear! What would you like to chat about?', isUser: false, timestamp: DateTime.now()),
-  ];
+  final List<Message> _messages = [];
 
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  void _sendMessage() {
+  late PreferencesService _prefs;
+  late OpenRouterService _openRouter;
+  String? _apiKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _prefs = PreferencesService();
+    _openRouter = OpenRouterService();
+    _loadApiKey();
+  }
+
+  void _loadApiKey() async {
+    _apiKey = await _prefs.getApiKey();
+    setState(() {});
+  }
+
+  void _sendMessage() async {
     if (_controller.text.trim().isEmpty) return;
 
     final userMessage = Message(
@@ -64,40 +79,82 @@ class _MyHomePageState extends State<MyHomePage> {
       );
     });
 
-    // Simulate automatic reply after a delay
-    Future.delayed(const Duration(seconds: 1), () {
-      final replies = [
-        'That sounds interesting!',
-        'I understand.',
-        'Tell me more about that.',
-        'How does that make you feel?',
-        'What are your thoughts on this?',
-        'I\'m here to listen.',
-        'That\'s a good point.',
-        'I agree with you.',
-        'Thanks for sharing!',
-        'What happened next?',
-      ];
+    if (_apiKey != null) {
+      // Build messages for API
+      final apiMessages = _messages.map((m) => {
+        'role': m.isUser ? 'user' : 'assistant',
+        'content': m.text,
+      }).toList();
 
-      final replyMessage = Message(
-        text: replies[DateTime.now().millisecondsSinceEpoch % replies.length],
-        isUser: false,
-        timestamp: DateTime.now(),
-      );
-
-      setState(() {
-        _messages.add(replyMessage);
-      });
-
-      // Scroll to bottom after reply
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
+      try {
+        final reply = await _openRouter.getCompletion(_apiKey!, apiMessages);
+        if (!mounted) return;
+        final replyMessage = Message(
+          text: reply,
+          isUser: false,
+          timestamp: DateTime.now(),
         );
-      });
-    });
+        setState(() {
+          _messages.add(replyMessage);
+        });
+        // Scroll to bottom after reply
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        });
+      } catch (e) {
+        if (!mounted) return;
+        final errorMessage = Message(
+          text: 'Error: ${e.toString()}',
+          isUser: false,
+          timestamp: DateTime.now(),
+        );
+        setState(() {
+          _messages.add(errorMessage);
+        });
+      }
+    } else {
+      _showApiKeyDialog();
+    }
+  }
+
+  void _showApiKeyDialog() {
+    final controller = TextEditingController(text: _apiKey ?? '');
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('OpenRouter API Key'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'Enter your API key'),
+          obscureText: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final key = controller.text.trim();
+              if (key.isNotEmpty) {
+                await _prefs.saveApiKey(key);
+                if (!mounted) return;
+                setState(() {
+                  _apiKey = key;
+                });
+              }
+              if (!mounted) return;
+              if (mounted) Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -108,6 +165,12 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         backgroundColor: colorScheme.surfaceContainerHighest,
         title: Text(widget.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: _showApiKeyDialog,
+          ),
+        ],
       ),
       body: Column(
         children: [
