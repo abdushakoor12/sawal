@@ -41,18 +41,34 @@ class _MyHomePageState extends State<MyHomePage> {
   late PreferencesService _prefs;
   late OpenRouterService _openRouter;
   String? _apiKey;
+  String? _selectedModel;
+  List<Map<String, dynamic>> _availableModels = [];
 
   @override
   void initState() {
     super.initState();
     _prefs = PreferencesService();
     _openRouter = OpenRouterService();
-    _loadApiKey();
+    _loadPreferences();
   }
 
-  void _loadApiKey() async {
+  void _loadPreferences() async {
     _apiKey = await _prefs.getApiKey();
+    _selectedModel = await _prefs.getSelectedModel() ?? 'openai/gpt-3.5-turbo'; // Default model
+    if (_apiKey != null) {
+      await _fetchModels();
+    }
     setState(() {});
+  }
+
+  Future<void> _fetchModels() async {
+    if (_apiKey == null) return;
+    try {
+      _availableModels = await _openRouter.getModels(_apiKey!);
+      setState(() {});
+    } catch (e) {
+      // Handle error, maybe show snackbar
+    }
   }
 
   void _sendMessage() async {
@@ -87,7 +103,7 @@ class _MyHomePageState extends State<MyHomePage> {
       }).toList();
 
       try {
-        final reply = await _openRouter.getCompletion(_apiKey!, apiMessages);
+        final reply = await _openRouter.getCompletion(_apiKey!, apiMessages, model: _selectedModel ?? 'openai/gpt-3.5-turbo');
         if (!mounted) return;
         final replyMessage = Message(
           text: reply,
@@ -122,37 +138,74 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _showApiKeyDialog() {
-    final controller = TextEditingController(text: _apiKey ?? '');
+    final apiKeyController = TextEditingController(text: _apiKey ?? '');
+    String? selectedModel = _selectedModel;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('OpenRouter API Key'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Enter your API key'),
-          obscureText: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('OpenRouter Settings'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: apiKeyController,
+                decoration: const InputDecoration(hintText: 'Enter your API key'),
+                obscureText: true,
+              ),
+              const SizedBox(height: 16),
+              if (_availableModels.isNotEmpty)
+                DropdownButtonFormField<String>(
+                  initialValue: selectedModel,
+                  decoration: const InputDecoration(labelText: 'Select Model'),
+                  items: _availableModels.map((model) {
+                    return DropdownMenuItem<String>(
+                      value: model['id'] as String,
+                      child: Text(model['name'] as String),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    selectedModel = value;
+                    setState(() {});
+                  },
+                )
+              else if (_apiKey != null)
+                const Text('Loading models...'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final key = apiKeyController.text.trim();
+                if (key.isNotEmpty && key != _apiKey) {
+                  await _prefs.saveApiKey(key);
+                  this.setState(() {
+                    _apiKey = key;
+                  });
+                  // Fetch models with new key
+                  await _fetchModels();
+                  // Reset selected model if not available
+                  if (_availableModels.isEmpty || !_availableModels.any((m) => m['id'] == selectedModel)) {
+                    selectedModel = _availableModels.isNotEmpty ? _availableModels[0]['id'] : null;
+                  }
+                }
+                if (selectedModel != null && selectedModel != _selectedModel) {
+                  await _prefs.saveSelectedModel(selectedModel!);
+                  this.setState(() {
+                    _selectedModel = selectedModel;
+                  });
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final key = controller.text.trim();
-              if (key.isNotEmpty) {
-                await _prefs.saveApiKey(key);
-                if (!mounted) return;
-                setState(() {
-                  _apiKey = key;
-                });
-              }
-              if (!mounted) return;
-              if (mounted) Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }
