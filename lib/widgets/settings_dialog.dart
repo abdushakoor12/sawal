@@ -5,8 +5,10 @@ class SettingsDialog extends StatefulWidget {
   final String? selectedModel;
   final List<Map<String, dynamic>> availableModels;
   final bool isLoadingModels;
+  final ThemeMode currentThemeMode;
   final Function(String) onApiKeyChanged;
   final Function(String) onModelChanged;
+  final Function(ThemeMode) onThemeChanged;
 
   const SettingsDialog({
     super.key,
@@ -14,8 +16,10 @@ class SettingsDialog extends StatefulWidget {
     this.selectedModel,
     required this.availableModels,
     required this.isLoadingModels,
+    required this.currentThemeMode,
     required this.onApiKeyChanged,
     required this.onModelChanged,
+    required this.onThemeChanged,
   });
 
   @override
@@ -25,12 +29,14 @@ class SettingsDialog extends StatefulWidget {
 class _SettingsDialogState extends State<SettingsDialog> {
   late TextEditingController _apiKeyController;
   late String? _selectedModel;
+  late ThemeMode _selectedThemeMode;
 
   @override
   void initState() {
     super.initState();
     _apiKeyController = TextEditingController(text: widget.apiKey ?? '');
     _selectedModel = widget.selectedModel;
+    _selectedThemeMode = widget.currentThemeMode;
   }
 
   @override
@@ -88,7 +94,24 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 SizedBox(width: 8),
                 Text('Loading models...'),
               ],
-            )
+            ),
+          const SizedBox(height: 16),
+          InkWell(
+            onTap: () => _showThemeModeSelectionDialog(context),
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Theme Mode',
+                border: OutlineInputBorder(),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(_getThemeModeDisplayName(_selectedThemeMode)),
+                  const Icon(Icons.arrow_drop_down),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
       actions: [
@@ -105,6 +128,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
             if (_selectedModel != null) {
               widget.onModelChanged(_selectedModel!);
             }
+            widget.onThemeChanged(_selectedThemeMode);
             Navigator.pop(context);
           },
           child: const Text('Save'),
@@ -173,6 +197,45 @@ class _SettingsDialogState extends State<SettingsDialog> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  String _getThemeModeDisplayName(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return 'Light';
+      case ThemeMode.dark:
+        return 'Dark';
+      case ThemeMode.system:
+        return 'System';
+    }
+  }
+
+  void _showThemeModeSelectionDialog(BuildContext parentContext) {
+    showDialog(
+      context: parentContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Select Theme Mode'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: ThemeMode.values.map((mode) => ListTile(
+            title: Text(_getThemeModeDisplayName(mode)),
+            trailing: _selectedThemeMode == mode ? const Icon(Icons.check) : null,
+            onTap: () {
+              setState(() {
+                _selectedThemeMode = mode;
+              });
+              Navigator.pop(dialogContext);
+            },
+          )).toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+        ],
       ),
     );
   }

@@ -7,9 +7,16 @@ import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  const MyHomePage({
+    super.key,
+    required this.title,
+    required this.onThemeChanged,
+    required this.currentThemeMode,
+  });
 
   final String title;
+  final Function(ThemeMode) onThemeChanged;
+  final ThemeMode currentThemeMode;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -148,6 +155,7 @@ class _MyHomePageState extends State<MyHomePage> {
         selectedModel: _selectedModel,
         availableModels: _availableModels,
         isLoadingModels: _isLoadingModels,
+        currentThemeMode: widget.currentThemeMode,
         onApiKeyChanged: (key) async {
           await _prefs.saveApiKey(key);
           setState(() {
@@ -171,6 +179,7 @@ class _MyHomePageState extends State<MyHomePage> {
             _selectedModel = model;
           });
         },
+        onThemeChanged: widget.onThemeChanged,
       ),
     );
   }
