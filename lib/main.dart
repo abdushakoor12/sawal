@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'theme/gruvbox.dart';
 import 'screens/home_page.dart';
-import 'data/preferences_service.dart';
+import 'data/database_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await DatabaseService.initialize();
   runApp(const MyApp());
 }
 
@@ -15,18 +17,16 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late PreferencesService _prefs;
   ThemeMode _themeMode = ThemeMode.system;
 
   @override
   void initState() {
     super.initState();
-    _prefs = PreferencesService();
     _loadThemeMode();
   }
 
   void _loadThemeMode() async {
-    final themeModeString = await _prefs.getThemeMode();
+    final themeModeString = await DatabaseService.getThemeMode();
     if (themeModeString != null) {
       setState(() {
         _themeMode = ThemeMode.values.firstWhere(
@@ -38,7 +38,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _changeThemeMode(ThemeMode mode) async {
-    await _prefs.saveThemeMode(mode.name);
+    await DatabaseService.setThemeMode(mode.name);
     setState(() {
       _themeMode = mode;
     });

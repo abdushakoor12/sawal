@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/message.dart';
-import '../data/preferences_service.dart';
+import '../models/chat_session.dart';
+import '../data/database_service.dart';
 import '../data/openrouter_service.dart';
 import '../widgets/settings_dialog.dart';
 import '../widgets/message_bubble.dart';
@@ -23,12 +24,12 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final List<Message> _messages = [];
+  ChatSession? _currentSession;
+  List<ChatSession> _sessions = [];
 
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  late PreferencesService _prefs;
   late OpenRouterService _openRouter;
   String? _apiKey;
   String? _selectedModel;
@@ -39,14 +40,77 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    _prefs = PreferencesService();
     _openRouter = OpenRouterService();
     _loadPreferences();
+    _loadSessions();
+  }
+
+  Future<void> _loadSessions() async {
+    _sessions = await DatabaseService.getSessions();
+    final currentId = await DatabaseService.getCurrentSessionId();
+    
+    if (currentId != null) {
+      final existing = _sessions.where((s) => s.id == currentId).firstOrNull;
+      if (existing != null) {
+        setState(() {
+          _currentSession = existing;
+        });
+        return;
+      }
+    }
+    
+    _createNewSession();
+  }
+
+  void _createNewSession() {
+    final now = DateTime.now();
+    final newSession = ChatSession(
+      id: now.millisecondsSinceEpoch.toString(),
+      title: 'New Chat',
+      messages: [],
+      createdAt: now,
+      updatedAt: now,
+    );
+    _sessions.insert(0, newSession);
+    _currentSession = newSession;
+    DatabaseService.setCurrentSessionId(newSession.id);
+    DatabaseService.saveSession(_currentSession!);
+    setState(() {});
+  }
+
+  Future<void> _switchSession(ChatSession session) async {
+    await DatabaseService.setCurrentSessionId(session.id);
+    setState(() {
+      _currentSession = session;
+    });
+  }
+
+  Future<void> _deleteSession(ChatSession session) async {
+    await DatabaseService.deleteSession(session.id);
+    _sessions.removeWhere((s) => s.id == session.id);
+    
+    if (_currentSession?.id == session.id) {
+      if (_sessions.isNotEmpty) {
+        await _switchSession(_sessions.first);
+      } else {
+        _createNewSession();
+      }
+    }
+    setState(() {});
+  }
+
+  Future<void> _updateCurrentSession() async {
+    if (_currentSession == null) return;
+    final index = _sessions.indexWhere((s) => s.id == _currentSession!.id);
+    if (index != -1) {
+      _sessions[index] = _currentSession!;
+      await DatabaseService.saveSession(_currentSession!);
+    }
   }
 
   void _loadPreferences() async {
-    _apiKey = await _prefs.getApiKey();
-    _selectedModel = await _prefs.getSelectedModel() ?? 'openai/gpt-3.5-turbo'; // Default model
+    _apiKey = await DatabaseService.getApiKey();
+    _selectedModel = await DatabaseService.getSelectedModel() ?? 'openai/gpt-3.5-turbo'; // Default model
     if (_apiKey != null) {
       await _fetchModels();
     }
@@ -73,7 +137,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _sendMessage() async {
-    if (_controller.text.trim().isEmpty || _isLoading) return;
+    if (_controller.text.trim().isEmpty || _isLoading || _currentSession == null) return;
 
     final userMessage = Message(
       text: _controller.text.trim(),
@@ -81,14 +145,28 @@ class _MyHomePageState extends State<MyHomePage> {
       timestamp: DateTime.now(),
     );
 
+    if (_currentSession!.messages.isEmpty) {
+      _currentSession = _currentSession!.copyWith(
+        title: _controller.text.trim().length > 30 
+          ? '${_controller.text.trim().substring(0, 30)}...' 
+          : _controller.text.trim(),
+      );
+    }
+
+    final messages = List<Message>.from(_currentSession!.messages)..add(userMessage);
+    _currentSession = _currentSession!.copyWith(
+      messages: messages,
+      updatedAt: DateTime.now(),
+    );
+
     setState(() {
-      _messages.add(userMessage);
       _isLoading = true;
     });
 
     _controller.clear();
 
-    // Scroll to bottom
+    await _updateCurrentSession();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
@@ -98,8 +176,7 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     if (_apiKey != null) {
-      // Build messages for API
-      final apiMessages = _messages.map((m) => {
+      final apiMessages = _currentSession!.messages.map((m) => {
         'role': m.isUser ? 'user' : 'assistant',
         'content': m.text,
       }).toList();
@@ -112,11 +189,15 @@ class _MyHomePageState extends State<MyHomePage> {
           isUser: false,
           timestamp: DateTime.now(),
         );
+        final updatedMessages = List<Message>.from(_currentSession!.messages)..add(replyMessage);
+        _currentSession = _currentSession!.copyWith(
+          messages: updatedMessages,
+          updatedAt: DateTime.now(),
+        );
+        await _updateCurrentSession();
         setState(() {
-          _messages.add(replyMessage);
           _isLoading = false;
         });
-        // Scroll to bottom after reply
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollController.animateTo(
             _scrollController.position.maxScrollExtent,
@@ -157,7 +238,7 @@ class _MyHomePageState extends State<MyHomePage> {
         isLoadingModels: _isLoadingModels,
         currentThemeMode: widget.currentThemeMode,
         onApiKeyChanged: (key) async {
-          await _prefs.saveApiKey(key);
+          await DatabaseService.setApiKey(key);
           setState(() {
             _apiKey = key;
           });
@@ -166,7 +247,7 @@ class _MyHomePageState extends State<MyHomePage> {
           if (_availableModels.isEmpty || !_availableModels.any((m) => m['id'] == _selectedModel)) {
             final newModel = _availableModels.isNotEmpty ? _availableModels[0]['id'] : null;
             if (newModel != null) {
-              await _prefs.saveSelectedModel(newModel);
+              await DatabaseService.setSelectedModel(newModel);
               setState(() {
                 _selectedModel = newModel;
               });
@@ -174,7 +255,7 @@ class _MyHomePageState extends State<MyHomePage> {
           }
         },
         onModelChanged: (model) async {
-          await _prefs.saveSelectedModel(model);
+          await DatabaseService.setSelectedModel(model);
           setState(() {
             _selectedModel = model;
           });
@@ -184,15 +265,103 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  void _showSessionHistory() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Chat History',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _createNewSession();
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('New Chat'),
+                ),
+              ],
+            ),
+            const Divider(),
+            Expanded(
+              child: _sessions.isEmpty
+                  ? const Center(child: Text('No chats yet'))
+                  : ListView.builder(
+                      itemCount: _sessions.length,
+                      itemBuilder: (context, index) {
+                        final session = _sessions[index];
+                        final isSelected = session.id == _currentSession?.id;
+                        return ListTile(
+                          selected: isSelected,
+                          title: Text(
+                            session.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            '${session.messages.length} messages',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _deleteSession(session);
+                            },
+                          ),
+                          onTap: () {
+                            Navigator.pop(context);
+                            _switchSession(session);
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final messages = _currentSession?.messages ?? [];
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: colorScheme.surfaceContainerHighest,
-        title: Text(widget.title),
+        title: GestureDetector(
+          onTap: _showSessionHistory,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  _currentSession?.title ?? widget.title,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_drop_down, size: 20),
+            ],
+          ),
+        ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: _showSessionHistory,
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: _showApiKeyDialog,
@@ -229,10 +398,10 @@ class _MyHomePageState extends State<MyHomePage> {
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              itemCount: _messages.length + (_isLoading ? 1 : 0),
+              itemCount: messages.length + (_isLoading ? 1 : 0),
               itemBuilder: (context, index) {
-                if (index < _messages.length) {
-                  final message = _messages[index];
+                if (index < messages.length) {
+                  final message = messages[index];
                   return MessageBubble(message: message);
                 } else {
                   return const TypingIndicator();
