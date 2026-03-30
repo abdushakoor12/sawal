@@ -43,6 +43,8 @@ class _MyHomePageState extends State<MyHomePage> {
   String? _apiKey;
   String? _selectedModel;
   List<Map<String, dynamic>> _availableModels = [];
+  bool _isLoading = false;
+  bool _isLoadingModels = false;
 
   @override
   void initState() {
@@ -63,17 +65,25 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _fetchModels() async {
     if (_apiKey == null) return;
+    setState(() {
+      _isLoadingModels = true;
+    });
     try {
       _availableModels = await _openRouter.getModels(_apiKey!);
       _availableModels.sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
-      setState(() {});
+      setState(() {
+        _isLoadingModels = false;
+      });
     } catch (e) {
+      setState(() {
+        _isLoadingModels = false;
+      });
       // Handle error, maybe show snackbar
     }
   }
 
   void _sendMessage() async {
-    if (_controller.text.trim().isEmpty) return;
+    if (_controller.text.trim().isEmpty || _isLoading) return;
 
     final userMessage = Message(
       text: _controller.text.trim(),
@@ -83,6 +93,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     setState(() {
       _messages.add(userMessage);
+      _isLoading = true;
     });
 
     _controller.clear();
@@ -113,6 +124,7 @@ class _MyHomePageState extends State<MyHomePage> {
         );
         setState(() {
           _messages.add(replyMessage);
+          _isLoading = false;
         });
         // Scroll to bottom after reply
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -124,16 +136,23 @@ class _MyHomePageState extends State<MyHomePage> {
         });
       } catch (e) {
         if (!mounted) return;
-        final errorMessage = Message(
-          text: 'Error: ${e.toString()}',
-          isUser: false,
-          timestamp: DateTime.now(),
-        );
         setState(() {
-          _messages.add(errorMessage);
+          _isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to get response: ${e.toString()}'),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: _sendMessage,
+            ),
+          ),
+        );
       }
     } else {
+      setState(() {
+        _isLoading = false;
+      });
       _showApiKeyDialog();
     }
   }
@@ -183,8 +202,18 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 )
-              else if (_apiKey != null)
-                const Text('Loading models...'),
+              else if (_apiKey != null && _isLoadingModels)
+                const Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 8),
+                    Text('Loading models...'),
+                  ],
+                )
             ],
           ),
           actions: [
@@ -265,7 +294,6 @@ class _MyHomePageState extends State<MyHomePage> {
                         trailing: isSelected ? const Icon(Icons.check) : null,
                         onTap: () {
                           onModelSelected(model['id'] as String);
-                          setState(() {});
                           Navigator.pop(dialogContext);
                         },
                       );
@@ -303,44 +331,109 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: Column(
         children: [
+          if (_apiKey == null)
+            Container(
+              color: colorScheme.errorContainer,
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                children: [
+                  Icon(Icons.warning, color: colorScheme.onErrorContainer),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'API key not set. Configure it in settings to start chatting.',
+                      style: TextStyle(color: colorScheme.onErrorContainer),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _showApiKeyDialog,
+                    child: Text(
+                      'Set Key',
+                      style: TextStyle(color: colorScheme.primary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
+              itemCount: _messages.length + (_isLoading ? 1 : 0),
               itemBuilder: (context, index) {
-                final message = _messages[index];
-                final isUser = message.isUser;
+                if (index < _messages.length) {
+                  final message = _messages[index];
+                  final isUser = message.isUser;
 
-                return Align(
-                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.all(12),
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isUser
-                          ? colorScheme.primary
-                          : colorScheme.surfaceContainer,
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(16),
-                        topRight: const Radius.circular(16),
-                        bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(4),
-                        bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(16),
+                  return Align(
+                    alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.all(12),
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.7,
                       ),
-                    ),
-                    child: Text(
-                      message.text,
-                      style: TextStyle(
+                      decoration: BoxDecoration(
                         color: isUser
-                            ? colorScheme.onPrimary
-                            : colorScheme.onSurface,
+                            ? colorScheme.primary
+                            : colorScheme.surfaceContainer,
+                        borderRadius: BorderRadius.only(
+                          topLeft: const Radius.circular(16),
+                          topRight: const Radius.circular(16),
+                          bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(4),
+                          bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(16),
+                        ),
+                      ),
+                      child: Text(
+                        message.text,
+                        style: TextStyle(
+                          color: isUser
+                              ? colorScheme.onPrimary
+                              : colorScheme.onSurface,
+                        ),
                       ),
                     ),
-                  ),
-                );
+                  );
+                } else {
+                  // Loading indicator
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.all(12),
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainer,
+                        borderRadius: BorderRadius.only(
+                          topLeft: const Radius.circular(16),
+                          topRight: const Radius.circular(16),
+                          bottomLeft: const Radius.circular(4),
+                          bottomRight: const Radius.circular(16),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Typing...',
+                            style: TextStyle(
+                              color: colorScheme.onSurface,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
               },
             ),
           ),
