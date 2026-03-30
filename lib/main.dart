@@ -65,6 +65,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if (_apiKey == null) return;
     try {
       _availableModels = await _openRouter.getModels(_apiKey!);
+      _availableModels.sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
       setState(() {});
     } catch (e) {
       // Handle error, maybe show snackbar
@@ -156,19 +157,31 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               const SizedBox(height: 16),
               if (_availableModels.isNotEmpty)
-                DropdownButtonFormField<String>(
-                  initialValue: selectedModel,
-                  decoration: const InputDecoration(labelText: 'Select Model'),
-                  items: _availableModels.map((model) {
-                    return DropdownMenuItem<String>(
-                      value: model['id'] as String,
-                      child: Text(model['name'] as String),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    selectedModel = value;
-                    setState(() {});
-                  },
+                InkWell(
+                  onTap: () => _showModelSelectionDialog(context, setState, selectedModel, (newModel) {
+                    selectedModel = newModel;
+                  }),
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Selected Model',
+                      border: OutlineInputBorder(),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _availableModels.firstWhere(
+                              (m) => m['id'] == selectedModel,
+                              orElse: () => {'name': 'Select Model'},
+                            )['name'] as String,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const Icon(Icons.arrow_drop_down),
+                      ],
+                    ),
+                  ),
                 )
               else if (_apiKey != null)
                 const Text('Loading models...'),
@@ -203,6 +216,69 @@ class _MyHomePageState extends State<MyHomePage> {
                 Navigator.pop(context);
               },
               child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showModelSelectionDialog(BuildContext parentContext, StateSetter setState, String? currentModel, Function(String) onModelSelected) {
+    String searchQuery = '';
+    List<Map<String, dynamic>> filteredModels = List.from(_availableModels);
+
+    showDialog(
+      context: parentContext,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, dialogSetState) => AlertDialog(
+          title: const Text('Select Model'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 400,
+            child: Column(
+              children: [
+                TextField(
+                  decoration: const InputDecoration(
+                    hintText: 'Search models...',
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                  onChanged: (value) {
+                    searchQuery = value.toLowerCase();
+                    filteredModels = _availableModels.where((model) {
+                      final name = (model['name'] as String).toLowerCase();
+                      final id = (model['id'] as String).toLowerCase();
+                      return name.contains(searchQuery) || id.contains(searchQuery);
+                    }).toList();
+                    dialogSetState(() {});
+                  },
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: filteredModels.length,
+                    itemBuilder: (context, index) {
+                      final model = filteredModels[index];
+                      final isSelected = model['id'] == currentModel;
+                      return ListTile(
+                        title: Text(model['name'] as String),
+                        subtitle: Text(model['id'] as String),
+                        trailing: isSelected ? const Icon(Icons.check) : null,
+                        onTap: () {
+                          onModelSelected(model['id'] as String);
+                          setState(() {});
+                          Navigator.pop(dialogContext);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
             ),
           ],
         ),
